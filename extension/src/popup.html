@@ -1,0 +1,28 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body class="popup">
+  <header>
+    <img src="icons/icon-32.png" alt="" width="20" height="20">
+    <h1>Hide the Slop</h1>
+    <label class="switch"><input type="checkbox" id="enabled"><span></span></label>
+  </header>
+
+  <section>
+    <div class="count"><strong id="count">0</strong> <span id="count-label">hidden on this page</span></div>
+    <ul id="reasons"></ul>
+  </section>
+
+  <section class="actions">
+    <button id="reveal">Show everything hidden here</button>
+    <button id="pause">Pause on this site</button>
+    <button id="options" class="link">Settings</button>
+  </section>
+
+  <script src="common.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!doctype html>
+<!-- Runs the real content script on a fake Instagram-style feed with a stubbed extension API.
+     Serve the extension folder (python3 -m http.server 8765) and open /test/harness.html. -->
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Hide the Slop harness</title>
+  <link rel="stylesheet" href="../src/content.css">
+  <style>
+    body { font: 14px system-ui; max-width: 520px; margin: 20px auto; }
+    article { border: 1px solid #ddd; border-radius: 8px; padding: 10px; margin: 10px 0; }
+    img { display: block; width: 120px; height: 120px; }
+  </style>
+  <script>
+    window.__slopTestHost = 'www.instagram.com';
+    const listeners = [];
+    const store = {
+      sync: { keywords: ["Tony's Pizza"], visualCheck: true },
+      local: {},
+    };
+    const area = (name) => ({
+      get: async (defaults) => ({ ...(typeof defaults === 'object' ? defaults : {}), ...store[name] }),
+      set: async (patch) => {
+        Object.assign(store[name], patch);
+        const changes = Object.fromEntries(Object.entries(patch).map(([k, v]) => [k, { newValue: v }]));
+        listeners.forEach((l) => l(changes, name));
+      },
+    });
+    window.lastStats = null;
+    window.learned = [];
+    // A hidden browser pane never reports what's on screen, so treat everything as visible.
+    window.IntersectionObserver = class {
+      constructor(cb) { this.cb = cb; }
+      observe(el) { setTimeout(() => this.cb([{ isIntersecting: true, target: el }]), 0); }
+      unobserve() {}
+    };
+    window.chrome = {
+      storage: { sync: area('sync'), local: area('local'), onChanged: { addListener: (l) => listeners.push(l) } },
+      runtime: {
+        onMessage: { addListener() {} },
+        // Stands in for background.js: read the file and run the same scanner.
+        sendMessage: async (msg) => {
+          if (msg.type === 'stats') { window.lastStats = msg; return; }
+          // The real model is checked by eval/test-vision.html; here we only test the wiring.
+          if (msg.type === 'classify') return msg.url.includes('looks-ai') ? 0.95 : 0.05;
+          if (msg.type === 'learn') { window.learned.push([msg.label, msg.url.split('/').pop()]); return true; }
+          if (msg.type === 'scan') {
+            const buf = new Uint8Array(await (await fetch(msg.url)).arrayBuffer());
+            return SlopMeta.scan(buf);
+          }
+        },
+      },
+    };
+  </script>
+</head>
+<body>
+  <h1>Fake feed</h1>
+
+  <article id="label"><header><a href="/burgerbarn">burgerbarn</a> <span>AI info</span></header>
+    <p>Try our new triple stack!</p></article>
+
+  <article id="hashtag"><header><a href="/eats">eats</a></header>
+    <p>Grand opening this weekend 🍔 #foodie #AIart #burgers</p></article>
+
+  <article id="metadata"><header><a href="/flyerguy">flyerguy</a></header>
+    <img src="fixtures/sd-burger.png" alt=""><p>Come hungry.</p></article>
+
+  <article id="visual"><header><a href="/promo">promo</a></header>
+    <img src="fixtures/looks-ai.png" alt="" style="width:200px;height:200px"><p>No label, no metadata, just looks like slop.</p></article>
+
+  <article id="keyword"><header><a href="/tonys">Tony's Pizza</a></header>
+    <p>Fresh slices daily</p></article>
+
+  <article id="sponsored"><header><a href="/brand">brand</a> <span>Sponsored</span></header>
+    <p>Buy stuff</p></article>
+
+  <article id="normal"><header><a href="/friend">friend</a></header>
+    <img src="fixtures/real-photo.png" alt=""><p>I love using AI tools for coding, but this is a real photo of my dog.</p></article>
+
+  <!-- Facebook-style markup with no <article>: must be caught by the page-wide label sweep. -->
+  <div id="fbfeed">
+    <div id="fbpost" style="border:1px solid #ddd;padding:10px;margin:10px 0">
+      <div><div><a href="/mark">Mark Rivera</a> is with <a href="/lit">LIT Wilton</a></div>
+        <div><span><span>AI content</span></span><span> · </span><span>10m</span></div></div>
+      <div>Halloween will not fall on a Saturday again until October 31, 2037!</div>
+      <div><img src="fixtures/real-photo.png" alt="" style="width:300px;height:300px"></div>
+    </div>
+    <div id="fbnormal" style="border:1px solid #ddd;padding:10px;margin:10px 0">
+      <div><a href="/friend2">A friend</a> <span>2h</span></div>
+      <div>Real photo of my lunch.</div>
+      <div><img src="fixtures/real-photo.png" alt="" style="width:300px;height:300px"></div>
+    </div>
+  </div>
+  <video id="reel" poster="fixtures/looks-ai.png?reel" style="width:220px;height:220px"></video>
+
+  <script src="../src/common.js"></script>
+  <script src="../src/meta.js"></script>
+  <script src="../src/content.js"></script>
+  <script>
+    // A post that shows up later, like infinite scroll.
+    setTimeout(() => {
+      const a = document.createElement('article');
+      a.id = 'late';
+      a.innerHTML = '<header><a href="/late">late</a> <span>Made with AI</span></header><p>New menu!</p>';
+      document.body.append(a);
+    }, 800);
+  </script>
+</body>
+</html>

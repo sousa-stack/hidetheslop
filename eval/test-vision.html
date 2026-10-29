@@ -1,0 +1,98 @@
+<!doctype html>
+<!-- Runs the extension's background.js (with vision.js and the real model) in a normal
+     page, with the extension APIs stubbed. Checks:
+       1. scores match browser-check.json (computed on the Mac with sharp)
+       2. rating a picture saves it, retrains, and moves its score
+     Serve the "Hide the Slop" folder (python3 -m http.server 8767), open /eval/test-vision.html -->
+<meta charset="utf-8">
+<title>Vision check</title>
+<pre id="out">running…</pre>
+<script>
+  const SRC = new URL('../extension/src/', location.href).href;
+  const local = {};
+  const changeListeners = [];
+  let onMessage = null;
+  const noop = { addListener() {} };
+  window.chrome = {
+    runtime: {
+      getURL: (p) => SRC + p,
+      onMessage: { addListener: (fn) => (onMessage = fn) },
+      onInstalled: noop,
+      onStartup: noop,
+      sendMessage: async () => {},
+      openOptionsPage() {},
+    },
+    storage: {
+      local: {
+        get: async (k) => (typeof k === 'string' ? { [k]: local[k] } : { ...local }),
+        set: async (patch) => {
+          Object.assign(local, patch);
+          const changes = Object.fromEntries(Object.keys(patch).map((k) => [k, { newValue: patch[k] }]));
+          changeListeners.forEach((l) => l(changes, 'local'));
+        },
+      },
+      onChanged: { addListener: (l) => changeListeners.push(l) },
+    },
+    tabs: { onUpdated: noop, onRemoved: noop, sendMessage: async () => {} },
+    action: { setBadgeText: async () => {}, setBadgeBackgroundColor: async () => {} },
+    contextMenus: { removeAll: async () => {}, create() {}, onClicked: noop },
+    permissions: { contains: async () => true },
+  };
+  // What a content script would send.
+  const send = (msg) => new Promise((resolve) => onMessage(msg, { tab: { id: 1 }, frameId: 0 }, resolve));
+</script>
+<script src="../extension/src/common.js"></script>
+<script src="../extension/src/meta.js"></script>
+<script src="../extension/src/train.js"></script>
+<script src="../extension/src/ort/ort.wasm.min.js"></script>
+<script src="../extension/src/vision.js"></script>
+<script src="../extension/src/background.js"></script>
+<script>
+(async () => {
+  const out = document.getElementById('out');
+  try {
+    // Put the already-downloaded model where vision.js looks, so it doesn't fetch it again.
+    const src = /MODEL_URL =\s*'([^']+)'/.exec(await (await fetch(SRC + 'vision.js')).text())[1];
+    const cache = await caches.open('hidetheslop-model');
+    if (!(await cache.match(src))) {
+      const buf = await (await fetch('models/Xenova/clip-vit-base-patch32/onnx/vision_model_int8.onnx')).arrayBuffer();
+      await cache.put(src, new Response(buf));
+    }
+
+    // 1. Same scores as the Mac.
+    const list = await (await fetch('browser-check.json')).json();
+    let maxDiff = 0, flips = 0;
+    const t0 = performance.now();
+    const url = (image) => new URL(image, location.href).href;
+    for (const { image, expected } of list) {
+      const got = await send({ type: 'classify', url: url(image) });
+      maxDiff = Math.max(maxDiff, Math.abs(got - expected));
+      if ((got >= 0.7) !== (expected >= 0.7)) flips++;
+    }
+    const scores = { n: list.length, maxDiff: +maxDiff.toFixed(4), flips, msPerImage: Math.round((performance.now() - t0) / list.length) };
+
+    // 2. Ratings. Use the AI image the shipped classifier is surest about.
+    const top = list.reduce((a, b) => (b.expected > a.expected ? b : a));
+    const before = await send({ type: 'classify', url: url(top.image) });
+    const r1 = performance.now();
+    const ok1 = await send({ type: 'learn', url: url(top.image), label: 'real' });
+    const retrainMs = Math.round(performance.now() - r1);
+    const afterReal = await send({ type: 'classify', url: url(top.image) });
+    const counts1 = [local.visionRatings.ai.length, local.visionRatings.real.length];
+    const ok2 = await send({ type: 'learn', url: url(top.image), label: 'ai' }); // changed my mind
+    const afterAi = await send({ type: 'classify', url: url(top.image) });
+    const counts2 = [local.visionRatings.ai.length, local.visionRatings.real.length];
+    const learning = {
+      image: top.image.split('/').pop(),
+      before: +before.toFixed(3), afterRatedReal: +afterReal.toFixed(3), afterRatedAiInstead: +afterAi.toFixed(3),
+      saved: ok1 && ok2, ratingsAfterReal: counts1, ratingsAfterSwitch: counts2, retrainMs,
+    };
+
+    window.result = { scores, learning };
+    out.textContent = JSON.stringify(window.result, null, 2);
+  } catch (e) {
+    window.result = { error: String((e && e.stack) || e) };
+    out.textContent = window.result.error;
+  }
+})();
+</script>

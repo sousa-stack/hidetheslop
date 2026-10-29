@@ -1,0 +1,12 @@
+# Real people's posts: never publish. The extension ships only their embeddings.
+test-images/
+
+# Downloaded or generated
+node_modules/
+eval/models/
+eval/embeddings-*.json
+eval/browser-check.json
+extension/dist/
+
+.DS_Store
+.claude/

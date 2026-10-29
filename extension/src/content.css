@@ -1,0 +1,10 @@
+/* Placeholder mode: keep the post box, show only our bar inside it. */
+.hidetheslop-collapsed > :not(.hidetheslop-ph) { display: none !important; }
+.hidetheslop-collapsed { min-height: 0 !important; height: auto !important; }
+
+/* Remove mode. */
+.hidetheslop-removed { display: none !important; }
+img.hidetheslop-img-removed, video.hidetheslop-img-removed { visibility: hidden !important; }
+
+/* A lone image or video that isn't inside a post. */
+img.hidetheslop-img-blur, video.hidetheslop-img-blur { filter: blur(28px) grayscale(1) !important; opacity: 0.35 !important; }

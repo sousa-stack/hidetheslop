@@ -1,0 +1,71 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Hide the Slop settings</title>
+  <link rel="stylesheet" href="ui.css">
+</head>
+<body class="options">
+  <main>
+    <header>
+      <img src="icons/icon-48.png" alt="" width="32" height="32">
+      <h1>Hide the Slop</h1>
+    </header>
+
+    <div id="perm" class="notice" hidden>
+      <p><strong>Hide the Slop can't see any pages yet.</strong> Firefox asks you to allow site access separately.</p>
+      <button id="grant">Allow on all sites</button>
+    </div>
+
+    <h2>What to hide</h2>
+    <label class="row"><input type="checkbox" data-key="labels">
+      <span><b>Posts the site labels as AI</b><small>"AI content", "AI info", "AI-generated", "Altered or synthetic content", "AI modified" on Facebook, Instagram, Threads, TikTok, YouTube, Pinterest.</small></span></label>
+    <label class="row"><input type="checkbox" data-key="hashtags">
+      <span><b>AI hashtags and phrases</b><small>#aiart, #midjourney, #aigenerated, "made with ChatGPT", "AI-generated image" and similar.</small></span></label>
+    <label class="row"><input type="checkbox" data-key="scanImages">
+      <span><b>Images with AI metadata</b><small>Reads the file's built-in provenance (C2PA Content Credentials, IPTC, Midjourney/Stable Diffusion/DALL·E/Firefly tags). Works on every site. Image files are re-read straight from where the page got them; nothing is sent anywhere else.</small></span></label>
+    <label class="row sub"><input type="checkbox" data-key="includeEdited">
+      <span><b>Include AI-edited photos</b><small>Real photos changed with generative fill or similar.</small></span></label>
+    <label class="row"><input type="checkbox" id="visualCheck">
+      <span><b>Guess from the picture itself</b><small>For AI images nobody labeled. A small image model runs on your computer and scores each picture and video thumbnail; nothing is uploaded. Downloads an 89 MB model from Hugging Face once. It makes mistakes, so anything it hides gets a Show bar.</small><small id="visualStatus" class="status"></small></span></label>
+    <div class="row sub slider">
+      <span><b>How sure before hiding</b><small>Lower hides more slop and more real pictures by mistake.</small></span>
+      <input type="range" id="visualCutoff" min="50" max="95" step="5"><output id="cutoffOut"></output>
+    </div>
+    <label class="row"><input type="checkbox" data-key="hideSponsored">
+      <span><b>Every sponsored post on social feeds</b><small>Nuclear option for ad slop. Instagram, X, Reddit, LinkedIn, YouTube, TikTok, Pinterest; Facebook is best effort because it scrambles the word "Sponsored".</small></span></label>
+
+    <h2>Your blocklist</h2>
+    <p class="hint">One per line. Posts mentioning any of these are hidden: restaurant names, page names, @handles, words. Right-click a post and pick <i>Always hide posts from this account…</i> to add one.</p>
+    <textarea id="keywords" rows="6" spellcheck="false" placeholder="Tony's Pizza Palace&#10;@slopfactory&#10;grand opening"></textarea>
+
+    <h2>How to hide</h2>
+    <label class="row"><input type="radio" name="mode" value="placeholder">
+      <span><b>Leave a thin bar with a Show button</b><small>So you can check what got hidden.</small></span></label>
+    <label class="row"><input type="radio" name="mode" value="remove">
+      <span><b>Remove it completely</b></span></label>
+
+    <h2>Paused sites</h2>
+    <p class="hint">One hostname per line.</p>
+    <textarea id="disabledSites" rows="3" spellcheck="false" placeholder="example.com"></textarea>
+
+    <h2>Right-clicked images</h2>
+    <p class="hint"><span id="blockedCount">0</span> images hidden by hand. <button id="clearImages" class="link">Forget them</button></p>
+
+    <h2>Image model</h2>
+    <p class="hint"><span id="modelState">Not downloaded.</span> <button id="deleteModel" class="link" hidden>Delete it</button></p>
+
+    <h2>Your ratings</h2>
+    <p class="hint">Click Show on something the picture check hid, then <i>AI, hide it</i> or <i>Not AI</i>. Right-click → <i>Hide this as AI slop</i> counts as an AI rating too. Each rating retrains it on this computer.</p>
+    <p class="hint"><span id="ratingCount">No ratings yet.</span>
+      <button id="exportRatings" class="link" hidden>Save to a file</button>
+      <button id="forgetRatings" class="link" hidden>Forget them</button></p>
+
+    <p id="saved" class="saved" aria-live="polite"></p>
+  </main>
+
+  <script src="common.js"></script>
+  <script src="vision.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>

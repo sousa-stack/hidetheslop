@@ -1,0 +1,9 @@
+{
+  "name": "hidetheslop-eval",
+  "private": true,
+  "type": "module",
+  "description": "Compares AI-image detector models on test-images/. Safe to delete.",
+  "dependencies": {
+    "@huggingface/transformers": "4.3.2"
+  }
+}
