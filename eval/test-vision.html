@@ -3,6 +3,8 @@
      page, with the extension APIs stubbed. Checks:
        1. scores match browser-check.json (computed on the Mac with sharp)
        2. rating a picture saves it, retrains, and moves its score
+       3. a picture is downloaded once for both checks, and not at all just to read
+          metadata on hosts that strip it
      Serve the "Hide the Slop" folder (python3 -m http.server 8767), open /eval/test-vision.html -->
 <meta charset="utf-8">
 <title>Vision check</title>
@@ -38,6 +40,14 @@
     contextMenus: { removeAll: async () => {}, create() {}, onClicked: noop },
     permissions: { contains: async () => true },
   };
+  // Count downloads per URL.
+  const fetched = {};
+  const realFetch = window.fetch;
+  window.fetch = (input, init) => {
+    const u = String(input && input.url ? input.url : input);
+    fetched[u] = (fetched[u] || 0) + 1;
+    return realFetch(input, init);
+  };
   // What a content script would send.
   const send = (msg) => new Promise((resolve) => onMessage(msg, { tab: { id: 1 }, frameId: 0 }, resolve));
 </script>
@@ -65,7 +75,7 @@
     const t0 = performance.now();
     const url = (image) => new URL(image, location.href).href;
     for (const { image, expected } of list) {
-      const got = await send({ type: 'classify', url: url(image) });
+      const got = (await send({ type: 'check', url: url(image), picture: true })).score;
       maxDiff = Math.max(maxDiff, Math.abs(got - expected));
       if ((got >= 0.7) !== (expected >= 0.7)) flips++;
     }
@@ -73,14 +83,14 @@
 
     // 2. Ratings. Use the AI image the shipped classifier is surest about.
     const top = list.reduce((a, b) => (b.expected > a.expected ? b : a));
-    const before = await send({ type: 'classify', url: url(top.image) });
+    const before = (await send({ type: 'check', url: url(top.image), picture: true })).score;
     const r1 = performance.now();
     const ok1 = await send({ type: 'learn', url: url(top.image), label: 'real' });
     const retrainMs = Math.round(performance.now() - r1);
-    const afterReal = await send({ type: 'classify', url: url(top.image) });
+    const afterReal = (await send({ type: 'check', url: url(top.image), picture: true })).score;
     const counts1 = [local.visionRatings.ai.length, local.visionRatings.real.length];
     const ok2 = await send({ type: 'learn', url: url(top.image), label: 'ai' }); // changed my mind
-    const afterAi = await send({ type: 'classify', url: url(top.image) });
+    const afterAi = (await send({ type: 'check', url: url(top.image), picture: true })).score;
     const counts2 = [local.visionRatings.ai.length, local.visionRatings.real.length];
     const learning = {
       image: top.image.split('/').pop(),
@@ -88,7 +98,26 @@
       saved: ok1 && ok2, ratingsAfterReal: counts1, ratingsAfterSwitch: counts2, retrainMs,
     };
 
-    window.result = { scores, learning };
+    // 3. Downloads.
+    const sd = new URL('../extension/test/fixtures/sd-burger.png', location.href).href;
+    const both = await send({ type: 'check', url: sd, picture: true, meta: true });
+    const bothAgain = await send({ type: 'check', url: sd, picture: true, meta: true });
+    const real = new URL('../extension/test/fixtures/real-photo.png', location.href).href;
+    const metaOnly = await send({ type: 'check', url: real, picture: false, meta: true });
+    const stripped = 'https://scontent.xx.fbcdn.net/v/never-fetched.jpg';
+    const strippedResult = await send({ type: 'check', url: stripped, picture: false, meta: true });
+    const downloads = {
+      bothChecksFromOneDownload: fetched[sd],
+      metaVerdict: both.meta && both.meta.reason,
+      gotScore: typeof both.score === 'number',
+      cachedRepeatSame: JSON.stringify(both) === JSON.stringify(bothAgain),
+      metaOnlyDownloads: fetched[real],
+      metaOnlyAi: metaOnly.meta && metaOnly.meta.ai,
+      strippingHostDownloads: fetched[stripped] || 0,
+      strippingHostResult: strippedResult,
+    };
+
+    window.result = { runtime: ort.env.versions?.web, scores, learning, downloads };
     out.textContent = JSON.stringify(window.result, null, 2);
   } catch (e) {
     window.result = { error: String((e && e.stack) || e) };

@@ -55,7 +55,7 @@ If Firefox didn't grant site access at install, the settings page opens with an 
 
 ## Privacy
 
-To check an image, the extension downloads that image again from the server the page already loaded it from, without cookies: the first 512 KB for the metadata check, the whole picture for the picture check. Nothing is sent to any other server. The only other download is the model, from Hugging Face, when you turn the picture check on. There are no analytics. Settings sync through your browser account.
+To check an image, the extension downloads that image again from the server the page already loaded it from, without cookies: once per picture, whole if the picture check is on, or just the first 512 KB for the metadata check alone. Hosts known to strip metadata (Facebook's and Instagram's) aren't downloaded just for that. Nothing is sent to any other server. The only other download is the model, from Hugging Face, when you turn the picture check on. There are no analytics. Settings sync through your browser account.
 
 ## Develop
 
@@ -71,6 +71,7 @@ Paths below are inside `extension/` unless they start with `eval/`.
 - `node --test test/meta.test.mjs` runs the metadata detector tests.
 - `src/ort/` is onnxruntime-web (see `src/ort/VERSION`). `src/vision.js` runs the model. Chrome runs it in `offscreen.html`, because its background service worker can't. Firefox runs it in the background page.
 - `eval/test-vision.html` runs `background.js` and `vision.js` in a browser, with the real model and stubbed extension APIs. It checks the scores match the Mac test and that ratings retrain the classifier. Serve the top folder with `python3 -m http.server 8767` and open `http://localhost:8767/eval/test-vision.html`.
+- `test/live.html` is for the installed extension in a real browser: a plain page of your `test-images` examples. Serve the top folder on port 8767 and open `/extension/test/live.html`.
 - `test/harness.html` runs the real content script on a fake feed. Serve `extension/` with `python3 -m http.server 8765` and open `http://localhost:8765/test/harness.html`.
 - `tools/make_icons.sh` remakes `src/icons/` from `../brand/logo-1024.png`.
 

@@ -98,11 +98,12 @@ async function ensureOffscreen() {
   await creatingOffscreen;
 }
 
-// The picture's 512-number summary, kept so a rating can reuse it.
-const embedUrl = cachedQueue(async (url) => {
-  if (typeof SlopVision !== 'undefined') return SlopVision.embed(url);
+// One download gets both the metadata verdict and the picture's 512-number summary.
+// Kept so a rating can reuse the summary.
+const inspectUrl = cachedQueue(async (url) => {
+  if (typeof SlopVision !== 'undefined') return SlopVision.inspect(url);
   await ensureOffscreen();
-  return api.runtime.sendMessage({ target: 'offscreen', type: 'embed', url });
+  return api.runtime.sendMessage({ target: 'offscreen', type: 'inspect', url });
 }, 2, 500);
 
 // The classifier: retrained from your ratings if you've made any, else the shipped one.
@@ -118,9 +119,23 @@ api.storage.onChanged.addListener((changes, area) => {
   if (area === 'local' && changes.visionModel) classifier = null;
 });
 
-async function classify(url) {
-  const e = await embedUrl(url);
-  return e ? SlopTrain.score(await currentClassifier(), e) : null;
+// These hosts strip metadata from everything, so downloading a picture just to read
+// its metadata would be wasted.
+const STRIPS_METADATA = /(^|\.)(fbcdn\.net|cdninstagram\.com)$/;
+
+// What a content script wants to know about an image. `picture`: score how it looks.
+// `meta`: read its metadata. Returns { meta, score }, or null.
+async function check({ url, picture, meta }) {
+  const inspected = picture ? await inspectUrl(url) : null;
+  if (inspected) {
+    return {
+      meta: meta ? inspected.meta : null,
+      score: SlopTrain.score(await currentClassifier(), inspected.embedding),
+    };
+  }
+  // No model (or it failed): the metadata check still works on its own.
+  if (meta && !STRIPS_METADATA.test(new URL(url).hostname)) return { meta: await scanUrl(url), score: null };
+  return null;
 }
 
 // ---- learning from your ratings --------------------------------------------
@@ -131,13 +146,13 @@ const RATING_WEIGHT = 3; // one of your ratings counts as much as three shipped 
 let learning = Promise.resolve();
 function learn(url, label) {
   learning = learning.then(async () => {
-    const e = await embedUrl(url);
-    if (!e) return false;
+    const inspected = await inspectUrl(url);
+    if (!inspected) return false;
     const { visionRatings = { ai: [], real: [] } } = await api.storage.local.get('visionRatings');
     const key = imageKey(url);
     // Rating the same picture again replaces the old rating.
     for (const kind of ['ai', 'real']) visionRatings[kind] = visionRatings[kind].filter((r) => r.key !== key);
-    visionRatings[label].push({ key, e: e.map((x) => +x.toFixed(5)) });
+    visionRatings[label].push({ key, e: inspected.embedding.map((x) => +x.toFixed(5)) });
     visionRatings[label] = visionRatings[label].slice(-MAX_RATINGS);
     await api.storage.local.set({ visionRatings, visionModel: await retrain(visionRatings) });
     return true;
@@ -200,12 +215,8 @@ api.tabs.onRemoved.addListener((tabId) => tabStats.delete(tabId));
 
 api.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.target === 'offscreen') return false;
-  if (msg.type === 'scan') {
-    scanUrl(msg.url).then(sendResponse);
-    return true;
-  }
-  if (msg.type === 'classify') {
-    classify(msg.url).then(sendResponse, () => sendResponse(null));
+  if (msg.type === 'check') {
+    check(msg).then(sendResponse, () => sendResponse(null));
     return true;
   }
   if (msg.type === 'learn') {

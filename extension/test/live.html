@@ -1,0 +1,36 @@
+<!doctype html>
+<!-- For testing the installed extension in a real browser (no stubs): a plain page of
+     known AI and real pictures from ../../test-images (kept out of git), plus the
+     Stable Diffusion fixture. Serve the hidetheslop folder (python3 -m http.server
+     8767) and open /extension/test/live.html with the extension installed and the
+     picture check on. The server log shows how often each picture is downloaded. -->
+<meta charset="utf-8">
+<title>Hide the Slop live test</title>
+<style>
+  body { font: 14px system-ui; margin: 20px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, 260px); gap: 12px; }
+  figure { margin: 0; border: 1px solid #ccc; border-radius: 8px; padding: 6px; }
+  img { width: 248px; height: 248px; object-fit: cover; display: block; }
+  figcaption { font-size: 12px; color: #666; margin-top: 4px; }
+</style>
+<h1>Live test</h1>
+<p id="status">loading…</p>
+<div class="grid" id="grid"></div>
+<script>
+  (async () => {
+    const grid = document.getElementById('grid');
+    const add = (src, label) => {
+      const f = document.createElement('figure');
+      f.dataset.expect = label;
+      f.innerHTML = `<img src="${src}" alt=""><figcaption>${label}</figcaption>`;
+      grid.append(f);
+    };
+    add('fixtures/sd-burger.png', 'ai (metadata)');
+    for (const kind of ['ai', 'real']) {
+      const html = await (await fetch(`../../test-images/${kind}/`)).text();
+      const files = [...html.matchAll(/href="([^"]+\.(?:jpe?g|png|webp))"/gi)].map((m) => m[1]).slice(0, 8);
+      for (const f of files) add(`../../test-images/${kind}/${f}`, kind);
+    }
+    document.getElementById('status').textContent = `${grid.children.length} pictures`;
+  })();
+</script>

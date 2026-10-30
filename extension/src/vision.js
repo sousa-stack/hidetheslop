@@ -1,5 +1,6 @@
 // Turns a picture into 512 numbers that describe how it looks (a CLIP ViT-B/32
-// embedding). background.js scores those with the classifier in train.js.
+// embedding). background.js scores those with the classifier in train.js. The same
+// download also gets the metadata check, so a picture is only fetched once.
 //
 // Runs in a page with a DOM: Chrome's offscreen document, Firefox's background page.
 // The options page also loads it, only to download the model.
@@ -18,6 +19,7 @@ var SlopVision = (() => {
   const MEAN = [0.48145466, 0.4578275, 0.40821073];
   const STD = [0.26862954, 0.26130258, 0.27577711];
   const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
+  const METADATA_BYTES = 512 * 1024; // metadata lives at the start of the file
 
   async function cached() {
     const cache = await caches.open(CACHE);
@@ -93,20 +95,22 @@ var SlopVision = (() => {
     return new ort.Tensor('float32', out, [1, 3, SIZE, SIZE]);
   }
 
-  // Returns the unit-length embedding of the image at `url` (512 numbers), or null.
-  async function embed(url) {
+  // Returns { meta, embedding } for the image at `url`, or null. `meta` is SlopMeta's
+  // verdict; `embedding` is 512 unit-length numbers.
+  async function inspect(url) {
     const session = await load();
-    const res = await fetch(url, { credentials: 'omit', cache: 'force-cache' });
+    const res = await fetch(url, { credentials: 'omit', cache: 'force-cache', signal: AbortSignal.timeout(15000) });
     if (!res.ok) return null;
     const blob = await res.blob();
     if (blob.size > MAX_IMAGE_BYTES || /^(text\/|application\/json)/.test(blob.type)) return null;
+    const meta = SlopMeta.scan(new Uint8Array(await blob.slice(0, METADATA_BYTES).arrayBuffer()));
     const { image_embeds } = await session.run({ pixel_values: await toTensor(blob) });
     const v = image_embeds.data;
     let norm = 0;
     for (const x of v) norm += x * x;
     norm = Math.sqrt(norm);
-    return Array.from(v, (x) => x / norm);
+    return { meta, embedding: Array.from(v, (x) => x / norm) };
   }
 
-  return { embed, download, isDownloaded, remove, MODEL_BYTES };
+  return { inspect, download, isDownloaded, remove, MODEL_BYTES };
 })();

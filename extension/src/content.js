@@ -410,10 +410,10 @@
       video.addEventListener('loadeddata', () => checkVideoFrame(video), { once: true });
       return;
     }
-    api.runtime.sendMessage({ type: 'classify', url: frame }).then((p) => {
+    api.runtime.sendMessage({ type: 'check', url: frame, picture: true }).then((r) => {
       // The classifier was trained on stills and is less sure of itself on video frames:
       // on a real feed it flagged a screen recording of music software.
-      if (p == null || !active() || p < Math.max(settings.visualCutoff, MIN_VIDEO_SCORE)) return;
+      if (!r || !active() || r.score < Math.max(settings.visualCutoff, MIN_VIDEO_SCORE)) return;
       hideForImage(video, 'the video looks AI-made', frame);
     }, () => {});
   }
@@ -432,31 +432,30 @@
     if (blockedImages.has(imageKey(url))) return hideForImage(img, 'you hid this image before');
     const natural = isVideo ? Infinity : Math.max(img.naturalWidth, img.naturalHeight);
 
-    // No AI metadata: ask the model what the picture looks like.
-    const lookAtPicture = () => {
-      if (!settings.visualCheck || !/^https?:/.test(url)) return;
-      if (natural < MIN_PICTURE_PX || Math.min(img.offsetWidth, img.offsetHeight) < 150) return;
-      api.runtime.sendMessage({ type: 'classify', url }).then((p) => {
-        if (p == null || !active() || p < settings.visualCutoff) return;
-        hideForImage(img, 'the picture looks AI-made');
-      }, () => {});
-    };
-    const handle = (r) => {
-      if (!active()) return;
-      if (r && (r.ai || (r.edited && settings.includeEdited))) return hideForImage(img, r.reason.toLowerCase());
-      lookAtPicture();
-    };
-    if (!settings.scanImages || natural < MIN_IMAGE_PX) return lookAtPicture();
-
+    const meta = settings.scanImages && natural >= MIN_IMAGE_PX;
     if (url.startsWith('data:')) {
+      if (!meta) return;
       try {
-        handle(SlopMeta.scanDataUrl(url, 512 * 1024));
+        const r = SlopMeta.scanDataUrl(url, 512 * 1024);
+        if (r && (r.ai || (r.edited && settings.includeEdited))) hideForImage(img, r.reason.toLowerCase());
       } catch {
         /* not base64 */
       }
-    } else if (/^https?:/.test(url)) {
-      api.runtime.sendMessage({ type: 'scan', url }).then(handle, () => {});
+      return;
     }
+    if (!/^https?:/.test(url)) return;
+
+    const picture =
+      settings.visualCheck && natural >= MIN_PICTURE_PX && Math.min(img.offsetWidth, img.offsetHeight) >= 150;
+    if (!meta && !picture) return;
+    api.runtime.sendMessage({ type: 'check', url, meta, picture }).then((r) => {
+      if (!r || !active()) return;
+      if (r.meta && (r.meta.ai || (r.meta.edited && settings.includeEdited))) {
+        hideForImage(img, r.meta.reason.toLowerCase());
+      } else if (r.score != null && r.score >= settings.visualCutoff) {
+        hideForImage(img, 'the picture looks AI-made');
+      }
+    }, () => {});
   }
 
   // Look for AI labels anywhere on the page, so a post still gets caught when its

@@ -42,11 +42,13 @@
         sendMessage: async (msg) => {
           if (msg.type === 'stats') { window.lastStats = msg; return; }
           // The real model is checked by eval/test-vision.html; here we only test the wiring.
-          if (msg.type === 'classify') return msg.url.includes('looks-ai') ? 0.95 : 0.05;
           if (msg.type === 'learn') { window.learned.push([msg.label, msg.url.split('/').pop()]); return true; }
-          if (msg.type === 'scan') {
-            const buf = new Uint8Array(await (await fetch(msg.url)).arrayBuffer());
-            return SlopMeta.scan(buf);
+          if (msg.type === 'check') {
+            const bytes = new Uint8Array(await (await fetch(msg.url)).arrayBuffer());
+            return {
+              meta: msg.meta ? SlopMeta.scan(bytes) : null,
+              score: msg.picture ? (msg.url.includes('looks-ai') ? 0.95 : 0.05) : null,
+            };
           }
         },
       },
