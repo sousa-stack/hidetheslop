@@ -11,7 +11,8 @@ A Chrome and Firefox extension that hides AI-generated images, posts and ads.
 | AI metadata inside the image file: C2PA Content Credentials and IPTC "trainedAlgorithmicMedia", Midjourney, DALL·E, ChatGPT, Firefly, Stable Diffusion and ComfyUI settings, the AIGC label | Every site, including ad iframes | Exact when the metadata survived. Facebook and Instagram strip it on upload; restaurant sites, ad networks and image hosts often don't. |
 | **The picture itself** (off until you turn it on in Settings): a small image model scores every picture and video thumbnail | Every site | Good on the glossy AI flyer look it was trained on: caught 23 of 25 AI images and wrongly flagged 3 of 32 real ones in testing (mostly human-made flyers built from templates). Everything it hides gets a Show bar, and your ratings there retrain it. |
 | Your blocklist: restaurant names, pages, @handles, words | Feeds | Exact. Right-click a post and pick **Always hide posts from this account…** |
-| Right-click **Hide this as AI slop** | Anywhere | Hides it now and remembers that image. |
+| **Hide slop** button: rest the mouse on a big picture for half a second | Anywhere | Hides the post, keeps that image hidden, and teaches the picture check. It floats above the page, so the page's images aren't changed. Turn it off in Settings. |
+| Right-click **Hide this as AI slop** | Anywhere | Same as the button. |
 | Every sponsored post (off by default) | Instagram, X, Reddit, LinkedIn, YouTube, TikTok, Pinterest; Facebook best effort | The heavy option for ad slop. |
 
 Without the picture check, an AI image with its metadata stripped that nobody labeled or hashtagged gets through. The picture check is for exactly those.
@@ -62,6 +63,7 @@ To check an image, the extension downloads that image again from the server the 
 |---|---|
 | `extension/` | The extension. `src/` is the source; `build.mjs` adds each browser's manifest. |
 | `eval/` | Scripts that compared detectors and train the picture classifier. `npm install` there, then `./get-models.sh`. |
+| `brand/` | The logo. `extension/tools/make_icons.sh` makes the toolbar icons from it. |
 | `test-images/` | Hand-sorted example pictures, **not in git**: they're real people's posts. The extension ships only their 512-number summaries. |
 
 Paths below are inside `extension/` unless they start with `eval/`.
@@ -70,7 +72,7 @@ Paths below are inside `extension/` unless they start with `eval/`.
 - `src/ort/` is onnxruntime-web (see `src/ort/VERSION`). `src/vision.js` runs the model. Chrome runs it in `offscreen.html`, because its background service worker can't. Firefox runs it in the background page.
 - `eval/test-vision.html` runs `background.js` and `vision.js` in a browser, with the real model and stubbed extension APIs. It checks the scores match the Mac test and that ratings retrain the classifier. Serve the top folder with `python3 -m http.server 8767` and open `http://localhost:8767/eval/test-vision.html`.
 - `test/harness.html` runs the real content script on a fake feed. Serve `extension/` with `python3 -m http.server 8765` and open `http://localhost:8765/test/harness.html`.
-- `python3 tools/make_icons.py src/icons` redraws the icons.
+- `tools/make_icons.sh` remakes `src/icons/` from `../brand/logo-1024.png`.
 
 When a site changes its layout, update its entry in `SITES` at the top of `src/content.js`.
 

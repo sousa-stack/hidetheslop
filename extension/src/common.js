@@ -15,6 +15,7 @@ var SLOP_DEFAULTS = {
   visualCheck: false,   // guess from the pixels with the downloaded model (vision.js)
   visualCutoff: 0.7,    // how sure the model must be before hiding
   hideSponsored: false, // hide every sponsored/promoted post on social feeds
+  hoverButton: true,    // "Hide slop" button when you rest the mouse on a big picture
   mode: 'placeholder',  // 'placeholder' leaves a "show" bar, 'remove' leaves nothing
   keywords: [],         // user's own words and accounts to hide
   disabledSites: [],

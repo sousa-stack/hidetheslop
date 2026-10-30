@@ -12,6 +12,7 @@
   const MIN_IMAGE_PX = 160;
   const MIN_PICTURE_PX = 200; // smaller than this is an icon or avatar, not worth the model's time
   const isMedia = (el) => el.tagName === 'IMG' || el.tagName === 'VIDEO';
+  const mediaUrl = (el) => (el.tagName === 'VIDEO' ? el.poster : el.currentSrc || el.src);
 
   // Exact text of the AI labels that platforms put on posts. Facebook has used
   // "Made with AI", then "AI info", then "AI content"; test against normalised text.
@@ -207,7 +208,7 @@
   function biggestPicture(el) {
     let best = null, bestArea = 0;
     for (const m of el.querySelectorAll('img, video[poster]')) {
-      const url = m.tagName === 'VIDEO' ? m.poster : m.currentSrc || m.src;
+      const url = mediaUrl(m);
       const area = m.offsetWidth * m.offsetHeight;
       if (/^https?:/.test(url) && Math.min(m.offsetWidth, m.offsetHeight) >= 150 && area > bestArea) {
         best = url;
@@ -364,7 +365,7 @@
   function hideForImage(img, reason) {
     const post = postOf(img);
     if (post && post.dataset.hidetheslop) return; // already hidden, or the user chose to see it
-    hide(post || img, reason, img.tagName === 'VIDEO' ? img.poster : img.currentSrc || img.src);
+    hide(post || img, reason, mediaUrl(img));
   }
 
   // `img` is an <img>, or a <video> whose poster (its thumbnail) we look at.
@@ -375,7 +376,7 @@
       img.addEventListener('load', () => checkImage(img), { once: true });
       return;
     }
-    const url = isVideo ? img.poster : img.currentSrc || img.src;
+    const url = mediaUrl(img);
     if (!url) return;
     if (blockedImages.has(imageKey(url))) return hideForImage(img, 'you hid this image before');
     const natural = isVideo ? Infinity : Math.max(img.naturalWidth, img.naturalHeight);
@@ -481,27 +482,32 @@
     return '';
   }
 
+  // You marked something as slop (right-click or the hover button): hide its post,
+  // keep hiding that image, and count it as an AI rating for the picture check.
+  async function hideByHand(target, src) {
+    const img = isMedia(target) ? target : null;
+    const post = postOf(target);
+    src = src || (img && mediaUrl(img));
+    if (src && /^https?:/.test(src)) {
+      blockedImages.add(imageKey(src));
+      const list = [...blockedImages].slice(-1000);
+      await api.storage.local.set({ blockedImages: list });
+    }
+    const el = post || img || target;
+    const picture = src && /^https?:/.test(src) ? src : biggestPicture(el);
+    if (picture && settings.visualCheck) {
+      api.runtime.sendMessage({ type: 'learn', url: picture, label: 'ai' }).catch(() => {});
+    }
+    if (el.dataset.hidetheslop === 'shown') delete el.dataset.hidetheslop;
+    hide(el, 'you hid this', picture);
+  }
+
   async function onMenu(msg) {
     const target = lastTarget;
     if (!target) return;
-    const img = target.tagName === 'IMG' ? target : null;
     const post = postOf(target);
 
-    if (msg.id === 'hide') {
-      const src = msg.srcUrl || (img && (img.currentSrc || img.src));
-      if (src && /^https?:/.test(src)) {
-        blockedImages.add(imageKey(src));
-        const list = [...blockedImages].slice(-1000);
-        await api.storage.local.set({ blockedImages: list });
-      }
-      const el = post || img || target;
-      const picture = src && /^https?:/.test(src) ? src : biggestPicture(el);
-      if (picture && settings.visualCheck) {
-        api.runtime.sendMessage({ type: 'learn', url: picture, label: 'ai' }).catch(() => {});
-      }
-      if (el.dataset.hidetheslop === 'shown') delete el.dataset.hidetheslop;
-      hide(el, 'you hid this', picture);
-    }
+    if (msg.id === 'hide') hideByHand(target, msg.srcUrl);
 
     if (msg.id === 'block') {
       const name = window.prompt(
@@ -524,6 +530,103 @@
     }
     return false;
   });
+
+  // ---- hover button ----------------------------------------------------------
+  // Rest the mouse on a big picture and a small "Hide slop" button appears in its
+  // corner. It floats in its own layer above the page; the page's images are never
+  // changed, and there is only ever one button.
+
+  const HOVER_DELAY = 500;
+  let chip = null; // the button's host element
+  let chipFor = null; // the picture it's for
+  let hoverCandidate = null;
+  let hoverTimer = 0;
+  let lastMove = 0;
+
+  // The picture under the pointer, if it's big enough to be worth a button. Sites
+  // often lay transparent boxes over their images, so look through everything there.
+  function pictureAt(x, y) {
+    for (const el of document.elementsFromPoint(x, y)) {
+      if (el === chip) return chipFor;
+      if (!isMedia(el)) continue;
+      const r = el.getBoundingClientRect();
+      if (r.width < MIN_PICTURE_PX || r.height < 150) continue; // avatars, icons, play buttons
+      if (el.closest('[data-hidetheslop="hidden"]')) return null;
+      return el;
+    }
+    return null;
+  }
+
+  function removeChip() {
+    if (chip) chip.remove();
+    chip = chipFor = null;
+  }
+
+  function showChip(pic) {
+    if (!pic.isConnected || !active()) return;
+    removeChip();
+    const r = pic.getBoundingClientRect();
+    chip = document.createElement('div');
+    chip.setAttribute(
+      'style',
+      `all: initial; position: fixed; z-index: 2147483647; top: ${Math.max(r.top, 0) + 8}px; ` +
+        `left: ${Math.min(r.right, window.innerWidth) - 8}px; transform: translateX(-100%);`
+    );
+    const root = chip.attachShadow({ mode: 'closed' });
+    root.innerHTML = `
+      <style>
+        button { all: unset; cursor: pointer; display: flex; align-items: center; gap: 6px;
+                 font: 600 12px/1 system-ui, sans-serif; color: #fff; background: rgba(28,25,23,.88);
+                 padding: 7px 10px 7px 8px; border-radius: 999px; box-shadow: 0 2px 8px rgba(0,0,0,.35); }
+        button:hover { background: #b91c1c; }
+        svg { width: 14px; height: 14px; }
+      </style>
+      <button type="button" title="Hide the Slop: hide this and teach it what slop looks like">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
+          <circle cx="12" cy="12" r="9.5"/><path d="M5.5 18.5l13-13"/></svg>
+        Hide slop
+      </button>`;
+    // Keep the page from treating this as a click on its picture (opening a photo viewer).
+    for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {
+      chip.addEventListener(type, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (type === 'click') {
+          const target = chipFor;
+          removeChip();
+          hideByHand(target);
+        }
+      });
+    }
+    document.documentElement.append(chip);
+    chipFor = pic;
+  }
+
+  document.addEventListener(
+    'mousemove',
+    (e) => {
+      if (!settings.hoverButton || !active()) return;
+      const now = Date.now();
+      if (now - lastMove < 80) return;
+      lastMove = now;
+      const pic = pictureAt(e.clientX, e.clientY);
+      if (pic === hoverCandidate) return;
+      hoverCandidate = pic;
+      clearTimeout(hoverTimer);
+      if (pic !== chipFor) removeChip();
+      if (pic && pic !== chipFor) hoverTimer = setTimeout(() => showChip(pic), HOVER_DELAY);
+    },
+    { capture: true, passive: true }
+  );
+  window.addEventListener(
+    'scroll',
+    () => {
+      clearTimeout(hoverTimer);
+      hoverCandidate = null;
+      removeChip();
+    },
+    { capture: true, passive: true }
+  );
 
   // ---- settings ------------------------------------------------------------
 
