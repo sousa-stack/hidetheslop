@@ -77,6 +77,8 @@ Paths below are inside `extension/` unless they start with `eval/`.
 
 When a site changes its layout, update its entry in `SITES` at the top of `src/content.js`.
 
+Working on the code, or an AI agent picking it up? Start with [CLAUDE.md](CLAUDE.md), then [docs/](docs/): architecture, testing, and the roadmap. What changed in each version is in [CHANGELOG.md](CHANGELOG.md).
+
 ## License
 
 MIT, see [LICENSE](LICENSE). Built on:
