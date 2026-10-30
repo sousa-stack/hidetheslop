@@ -11,6 +11,7 @@
   const TOP = window === window.top;
   const MIN_IMAGE_PX = 160;
   const MIN_PICTURE_PX = 200; // smaller than this is an icon or avatar, not worth the model's time
+  const MIN_VIDEO_SCORE = 0.9;
   const isMedia = (el) => el.tagName === 'IMG' || el.tagName === 'VIDEO';
   const mediaUrl = (el) => (el.tagName === 'VIDEO' ? el.poster : el.currentSrc || el.src);
 
@@ -46,9 +47,12 @@
   const SITES = [
     {
       host: /(^|\.)facebook\.com$/,
-      posts: '[aria-posinset], div[role="article"], [data-pagelet^="FeedUnit"]',
+      // Each feed item is a div[data-virtualized]; offscreen ones are kept as empty
+      // placeholders (data-virtualized="true"). The others cover older layouts and comments.
+      posts: 'div[data-virtualized], [aria-posinset], div[role="article"], [data-pagelet^="FeedUnit"]',
       author: '[data-ad-rendering-role="profile_name"] a, h2 a, h3 a, h4 a, strong a',
-      sponsored: /^Sponsored$/i,
+      sponsored: /^(?:Sponsored|Ad)$/i,
+      scrambledSponsored: true,
     },
     {
       host: /(^|\.)instagram\.com$/,
@@ -187,6 +191,17 @@
     return parts;
   }
 
+  // Facebook sometimes writes "Sponsored" as separate one-letter fragments in a jumbled
+  // order, with stray extras, to stop text matching. Check the letters are all there.
+  function hasScrambledSponsored(texts) {
+    const have = {};
+    for (const t of texts) {
+      const c = t.trim().toLowerCase();
+      if (c.length === 1) have[c] = (have[c] || 0) + 1;
+    }
+    return Object.entries({ s: 2, p: 1, o: 2, n: 1, r: 1, e: 1, d: 1 }).every(([c, n]) => (have[c] || 0) >= n);
+  }
+
   function ariaLabels(post) {
     const out = [];
     for (const el of post.querySelectorAll('[aria-label]')) {
@@ -194,8 +209,10 @@
     }
     // Facebook writes "Sponsored" into a hidden element and points at it.
     for (const el of post.querySelectorAll('[aria-labelledby]')) {
-      const ref = document.getElementById(el.getAttribute('aria-labelledby'));
-      if (ref) out.push(ref.textContent);
+      for (const id of el.getAttribute('aria-labelledby').split(/\s+/)) {
+        const ref = document.getElementById(id);
+        if (ref) out.push(ref.textContent);
+      }
     }
     return out;
   }
@@ -335,8 +352,9 @@
       if (hit) return hide(post, `the site labels it "${normalise(hit)}"`);
     }
     if (settings.hideSponsored && site.sponsored) {
-      const hit = shortBits.find((t) => site.sponsored.test(t));
-      if (hit) return hide(post, 'sponsored post');
+      if (shortBits.some((t) => site.sponsored.test(t)) || (site.scrambledSponsored && hasScrambledSponsored(texts))) {
+        return hide(post, 'sponsored post');
+      }
     }
     const full = texts.join(' ');
     if (settings.hashtags) {
@@ -362,16 +380,49 @@
     { rootMargin: '1200px 0px' }
   );
 
-  function hideForImage(img, reason) {
+  function hideForImage(img, reason, picture = mediaUrl(img)) {
     const post = postOf(img);
     if (post && post.dataset.hidetheslop) return; // already hidden, or the user chose to see it
-    hide(post || img, reason, mediaUrl(img));
+    hide(post || img, reason, picture);
+  }
+
+  // The frame a video is showing, as a data: URL, or null if it isn't ready yet.
+  function grabFrame(video) {
+    const side = Math.min(video.videoWidth, video.videoHeight);
+    if (video.readyState < 2 || !side) return null;
+    const canvas = document.createElement('canvas');
+    canvas.width = canvas.height = 256;
+    const x = (video.videoWidth - side) / 2;
+    const y = (video.videoHeight - side) / 2;
+    try {
+      canvas.getContext('2d').drawImage(video, x, y, side, side, 0, 0, 256, 256);
+      return canvas.toDataURL('image/jpeg', 0.9);
+    } catch {
+      return null; // a video from another site that doesn't allow reading its pixels
+    }
+  }
+
+  // Many feed videos have no thumbnail, so look at a frame of the video itself.
+  function checkVideoFrame(video) {
+    if (!settings.visualCheck || Math.min(video.offsetWidth, video.offsetHeight) < 150) return;
+    const frame = grabFrame(video);
+    if (!frame) {
+      video.addEventListener('loadeddata', () => checkVideoFrame(video), { once: true });
+      return;
+    }
+    api.runtime.sendMessage({ type: 'classify', url: frame }).then((p) => {
+      // The classifier was trained on stills and is less sure of itself on video frames:
+      // on a real feed it flagged a screen recording of music software.
+      if (p == null || !active() || p < Math.max(settings.visualCutoff, MIN_VIDEO_SCORE)) return;
+      hideForImage(video, 'the video looks AI-made', frame);
+    }, () => {});
   }
 
   // `img` is an <img>, or a <video> whose poster (its thumbnail) we look at.
   function checkImage(img) {
     if (!active() || img.dataset.hidetheslop) return;
     const isVideo = img.tagName === 'VIDEO';
+    if (isVideo && !img.poster) return checkVideoFrame(img);
     if (!isVideo && !img.complete) {
       img.addEventListener('load', () => checkImage(img), { once: true });
       return;
@@ -441,7 +492,7 @@
         for (const ad of document.querySelectorAll(site.ads)) hide(ad, 'sponsored post');
       }
     }
-    for (const img of [...document.images, ...document.querySelectorAll('video[poster]')]) {
+    for (const img of [...document.images, ...document.querySelectorAll('video')]) {
       if (seenImages.has(img)) continue;
       seenImages.add(img);
       io.observe(img);
@@ -487,14 +538,14 @@
   async function hideByHand(target, src) {
     const img = isMedia(target) ? target : null;
     const post = postOf(target);
-    src = src || (img && mediaUrl(img));
+    src = src || (img && (mediaUrl(img) || (img.tagName === 'VIDEO' && grabFrame(img))));
     if (src && /^https?:/.test(src)) {
       blockedImages.add(imageKey(src));
       const list = [...blockedImages].slice(-1000);
       await api.storage.local.set({ blockedImages: list });
     }
     const el = post || img || target;
-    const picture = src && /^https?:/.test(src) ? src : biggestPicture(el);
+    const picture = src && /^(https?|data):/.test(src) ? src : biggestPicture(el);
     if (picture && settings.visualCheck) {
       api.runtime.sendMessage({ type: 'learn', url: picture, label: 'ai' }).catch(() => {});
     }

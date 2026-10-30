@@ -158,6 +158,7 @@ async function retrain(ratings) {
 
 // Same picture, different size or signature in the URL.
 function imageKey(url) {
+  if (url.startsWith('data:')) return url.slice(-64); // a video frame
   try {
     const u = new URL(url);
     return u.origin + u.pathname;
