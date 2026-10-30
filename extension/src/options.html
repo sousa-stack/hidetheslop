@@ -7,9 +7,13 @@
 </head>
 <body class="options">
   <main>
-    <header>
-      <img src="icons/icon-48.png" alt="" width="32" height="32">
-      <h1>Hide the Slop</h1>
+    <header class="hero">
+      <img src="icons/icon-128.png" alt="" width="64" height="64">
+      <div>
+        <h1>Hide the Slop</h1>
+        <p class="tagline">Hides AI-generated posts, pictures and ads as you browse.</p>
+      </div>
+      <span id="version" class="version"></span>
     </header>
 
     <div id="perm" class="notice" hidden>
@@ -17,53 +21,81 @@
       <button id="grant">Allow on all sites</button>
     </div>
 
-    <h2>What to hide</h2>
-    <label class="row"><input type="checkbox" data-key="labels">
-      <span><b>Posts the site labels as AI</b><small>"AI content", "AI info", "AI-generated", "Altered or synthetic content", "AI modified" on Facebook, Instagram, Threads, TikTok, YouTube, Pinterest.</small></span></label>
-    <label class="row"><input type="checkbox" data-key="hashtags">
-      <span><b>AI hashtags and phrases</b><small>#aiart, #midjourney, #aigenerated, "made with ChatGPT", "AI-generated image" and similar.</small></span></label>
-    <label class="row"><input type="checkbox" data-key="scanImages">
-      <span><b>Images with AI metadata</b><small>Reads the file's built-in provenance (C2PA Content Credentials, IPTC, Midjourney/Stable Diffusion/DALL·E/Firefly tags). Works on every site. Image files are re-read straight from where the page got them; nothing is sent anywhere else.</small></span></label>
-    <label class="row sub"><input type="checkbox" data-key="includeEdited">
-      <span><b>Include AI-edited photos</b><small>Real photos changed with generative fill or similar.</small></span></label>
-    <label class="row"><input type="checkbox" id="visualCheck">
-      <span><b>Guess from the picture itself</b><small>For AI images nobody labeled. A small image model runs on your computer and scores each picture and video thumbnail; nothing is uploaded. Downloads an 89 MB model from Hugging Face once. It makes mistakes, so anything it hides gets a Show bar.</small><small id="visualStatus" class="status"></small></span></label>
-    <div class="row sub slider">
-      <span><b>How sure before hiding</b><small>Lower hides more slop and more real pictures by mistake.</small></span>
-      <input type="range" id="visualCutoff" min="50" max="95" step="5"><output id="cutoffOut"></output>
-    </div>
-    <label class="row"><input type="checkbox" data-key="hideSponsored">
-      <span><b>Every sponsored post on social feeds</b><small>Nuclear option for ad slop. Instagram, X, Reddit, LinkedIn, YouTube, TikTok, Pinterest; Facebook is best effort because it scrambles the word "Sponsored".</small></span></label>
+    <section class="card feature">
+      <label class="row"><input type="checkbox" id="visualCheck">
+        <span><b>Guess from the picture itself</b><small>Spots AI pictures nobody labeled. Runs on your computer; nothing is uploaded.</small><small id="visualStatus" class="status"></small></span></label>
+      <div class="row slider">
+        <span><b>How sure before hiding</b><small>Lower catches more slop, and more real pictures by mistake.</small></span>
+        <input type="range" id="visualCutoff" min="50" max="95" step="5"><output id="cutoffOut"></output>
+      </div>
+      <div class="stats">
+        <div>
+          <span class="label">Model</span>
+          <span id="modelState">Not downloaded.</span>
+          <button id="deleteModel" class="link" hidden>Delete it</button>
+        </div>
+        <div>
+          <span class="label">Your ratings</span>
+          <span id="ratingCount">No ratings yet.</span>
+          <button id="exportRatings" class="link" hidden>Save to a file</button>
+          <button id="forgetRatings" class="link" hidden>Forget them</button>
+        </div>
+      </div>
+      <details>
+        <summary>How it works</summary>
+        <p>Turning this on downloads an 89 MB image model from Hugging Face once. After that, every picture and video thumbnail you scroll past gets a score for how AI-made it looks, and anything above your cutoff is hidden behind a Show bar.</p>
+        <p>It makes mistakes, so teach it: click <i>Show</i> on something it hid and answer <i>AI, hide it</i> or <i>Not AI</i>. Hiding something it missed (the <i>Hide slop</i> button, or right-click) counts as an AI rating. Each rating retrains it on this computer.</p>
+        <p><i>Save to a file</i> exports your ratings as numbers that describe each picture, not the pictures themselves.</p>
+      </details>
+    </section>
 
-    <h2>Hiding things yourself</h2>
-    <label class="row"><input type="checkbox" data-key="hoverButton">
-      <span><b>Hide slop button on pictures</b><small>Rest the mouse on a big picture for half a second and a small <i>Hide slop</i> button appears in its corner. Clicking it hides the post, keeps that image hidden, and teaches the picture check. Right-click → <i>Hide this as AI slop</i> does the same.</small></span></label>
+    <section class="card">
+      <h2>What to hide</h2>
+      <label class="row"><input type="checkbox" data-key="labels">
+        <span><b>Posts the site labels as AI</b><small>"AI content", "AI info" and similar labels on Facebook, Instagram, TikTok, YouTube and more.</small></span></label>
+      <label class="row"><input type="checkbox" data-key="hashtags">
+        <span><b>AI hashtags and phrases</b><small>#aiart, #midjourney, "made with ChatGPT" and the like.</small></span></label>
+      <label class="row"><input type="checkbox" data-key="scanImages">
+        <span><b>Images with AI metadata</b><small>The tags AI tools write into image files. Works on every site.</small></span></label>
+      <label class="row sub"><input type="checkbox" data-key="includeEdited">
+        <span><b>Include AI-edited photos</b><small>Real photos changed with generative fill.</small></span></label>
+      <label class="row"><input type="checkbox" data-key="hideSponsored">
+        <span><b>Every sponsored post</b><small>Hides all ads on social feeds. Facebook is hit-or-miss.</small></span></label>
+      <details>
+        <summary>How it works</summary>
+        <p>Labels are checked on Facebook, Instagram, Threads, TikTok, YouTube and Pinterest; hashtags on those plus X, Reddit and LinkedIn.</p>
+        <p>The metadata check reads C2PA Content Credentials, IPTC "AI-generated" tags, and the settings Midjourney, DALL·E, ChatGPT, Firefly, Stable Diffusion and ComfyUI leave behind. Facebook and Instagram strip these on upload; restaurant sites, ad networks and image hosts often don't. Images are re-read from wherever the page got them; nothing is sent anywhere else.</p>
+      </details>
+    </section>
 
-    <h2>Your blocklist</h2>
-    <p class="hint">One per line. Posts mentioning any of these are hidden: restaurant names, page names, @handles, words. Right-click a post and pick <i>Always hide posts from this account…</i> to add one.</p>
-    <textarea id="keywords" rows="6" spellcheck="false" placeholder="Tony's Pizza Palace&#10;@slopfactory&#10;grand opening"></textarea>
+    <section class="card">
+      <h2>Hiding things yourself</h2>
+      <label class="row"><input type="checkbox" data-key="hoverButton">
+        <span><b>Hide slop button on pictures</b><small>Rest the mouse on a big picture to get a button in its corner. Right-click → <i>Hide this as AI slop</i> works too.</small></span></label>
+      <div class="row field">
+        <span><b>Your blocklist</b><small>Posts mentioning any of these are hidden. One per line: pages, @handles, words.</small></span>
+        <textarea id="keywords" rows="5" spellcheck="false" placeholder="Tony's Pizza Palace&#10;@slopfactory&#10;grand opening"></textarea>
+      </div>
+    </section>
 
-    <h2>How to hide</h2>
-    <label class="row"><input type="radio" name="mode" value="placeholder">
-      <span><b>Leave a thin bar with a Show button</b><small>So you can check what got hidden.</small></span></label>
-    <label class="row"><input type="radio" name="mode" value="remove">
-      <span><b>Remove it completely</b></span></label>
+    <section class="card">
+      <h2>How to hide</h2>
+      <label class="row"><input type="radio" name="mode" value="placeholder">
+        <span><b>Leave a thin bar with a Show button</b><small>So you can check what got hidden.</small></span></label>
+      <label class="row"><input type="radio" name="mode" value="remove">
+        <span><b>Remove it completely</b></span></label>
+    </section>
 
-    <h2>Paused sites</h2>
-    <p class="hint">One hostname per line.</p>
-    <textarea id="disabledSites" rows="3" spellcheck="false" placeholder="example.com"></textarea>
-
-    <h2>Right-clicked images</h2>
-    <p class="hint"><span id="blockedCount">0</span> images hidden by hand. <button id="clearImages" class="link">Forget them</button></p>
-
-    <h2>Image model</h2>
-    <p class="hint"><span id="modelState">Not downloaded.</span> <button id="deleteModel" class="link" hidden>Delete it</button></p>
-
-    <h2>Your ratings</h2>
-    <p class="hint">Click Show on something the picture check hid, then <i>AI, hide it</i> or <i>Not AI</i>. Right-click → <i>Hide this as AI slop</i> counts as an AI rating too. Each rating retrains it on this computer.</p>
-    <p class="hint"><span id="ratingCount">No ratings yet.</span>
-      <button id="exportRatings" class="link" hidden>Save to a file</button>
-      <button id="forgetRatings" class="link" hidden>Forget them</button></p>
+    <section class="card">
+      <h2>Advanced</h2>
+      <div class="row field">
+        <span><b>Paused sites</b><small>Hide the Slop does nothing on these. One per line.</small></span>
+        <textarea id="disabledSites" rows="3" spellcheck="false" placeholder="example.com"></textarea>
+      </div>
+      <div class="row">
+        <span><b>Pictures you hid by hand</b><small><span id="blockedCount">0</span> kept hidden. <button id="clearImages" class="link">Forget them</button></small></span>
+      </div>
+    </section>
 
     <p id="saved" class="saved" aria-live="polite"></p>
   </main>

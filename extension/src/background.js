@@ -243,7 +243,7 @@ api.contextMenus.onClicked.addListener((info, tab) => {
 
 api.runtime.onInstalled.addListener(async () => {
   createMenus();
-  api.action.setBadgeBackgroundColor({ color: '#c2410c' }).catch(() => {});
+  api.action.setBadgeBackgroundColor({ color: '#c80000' }).catch(() => {});
   // Firefox lets people install without granting site access; nothing works until they do.
   const granted = await api.permissions.contains({ origins: SLOP_ORIGINS }).catch(() => true);
   if (!granted) api.runtime.openOptionsPage();

@@ -230,7 +230,7 @@
         div { font: 13px/1.4 system-ui, sans-serif; color: #6b6b6b; background: rgba(127,127,127,.08);
               border: 1px dashed rgba(127,127,127,.35); border-radius: 8px; padding: 8px 12px; margin: 4px 0;
               display: flex; gap: 12px; align-items: center; }
-        b { color: #c2410c; font-weight: 600; }
+        b { color: #c80000; font-weight: 600; }
         span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         button { all: unset; cursor: pointer; color: inherit; text-decoration: underline; white-space: nowrap; }
       </style>

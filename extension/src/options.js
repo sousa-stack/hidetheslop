@@ -18,6 +18,7 @@ async function checkPermission() {
 
 (async () => {
   const s = await slopGetSettings();
+  $('version').textContent = `v${api.runtime.getManifest().version}`;
 
   for (const box of document.querySelectorAll('input[type=checkbox][data-key]')) {
     box.checked = !!s[box.dataset.key];
@@ -33,7 +34,7 @@ async function checkPermission() {
   const status = (t) => ($('visualStatus').textContent = t);
   async function showModelState() {
     const have = await SlopVision.isDownloaded();
-    $('modelState').textContent = have ? 'Downloaded (89 MB, kept in this browser).' : 'Not downloaded.';
+    $('modelState').textContent = have ? 'Downloaded (89 MB).' : 'Not downloaded.';
     $('deleteModel').hidden = !have;
     if (vbox.checked && !have) status('The model is missing. Turn this off and on again to download it.');
   }

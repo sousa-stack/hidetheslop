@@ -1,0 +1,46 @@
+<!doctype html>
+<!-- Shows the real src/options.html in a normal tab, with the extension APIs faked
+     and some sample settings filled in. Serve the hidetheslop folder
+     (python3 -m http.server 8767) and open /extension/test/options-preview.html
+     Add ?empty for a fresh install. -->
+<meta charset="utf-8">
+<script>
+  (async () => {
+    const html = await (await fetch('../src/options.html', { cache: 'no-store' })).text();
+    const stub = `<base href="../src/">
+<script>
+  const empty = ${JSON.stringify(location.search.includes('empty'))};
+  const sync = empty ? {} : { keywords: ["Tony's Pizza Palace", '@slopfactory'], visualCheck: true, visualCutoff: 0.7 };
+  const fakeE = () => [];
+  const local = empty ? {} : {
+    blockedImages: ['a', 'b', 'c'],
+    visionRatings: { ai: Array.from({ length: 12 }, () => ({ key: '', e: fakeE() })), real: Array.from({ length: 5 }, () => ({ key: '', e: fakeE() })) },
+  };
+  const listeners = [];
+  const area = (name, store) => ({
+    get: async (d) => (typeof d === 'string' ? { [d]: store[d] } : { ...(d || {}), ...store }),
+    set: async (patch) => {
+      Object.assign(store, patch);
+      const changes = Object.fromEntries(Object.keys(patch).map((k) => [k, { newValue: patch[k] }]));
+      listeners.forEach((l) => l(changes, name));
+    },
+    remove: async (keys) => [].concat(keys).forEach((k) => delete store[k]),
+  });
+  // Pretend the 89 MB model is already downloaded.
+  if (!empty) {
+    const open = caches.open.bind(caches);
+    caches.open = async (n) => (n === 'hidetheslop-model' ? { match: async () => new Response('') } : open(n));
+  }
+  window.chrome = {
+    storage: { sync: area('sync', sync), local: area('local', local), onChanged: { addListener: (l) => listeners.push(l) } },
+    permissions: { contains: async () => true, request: async () => true },
+    runtime: { getURL: (p) => p, openOptionsPage() {}, getManifest: () => ({ version: '1.3.0' }) },
+  };
+<\/script>`;
+    document.open();
+    // Load fresh copies of the page's CSS and JS so edits show up on reload.
+    const fresh = html.replace(/(href|src)="([^"]+\.(?:css|js))"/g, `$1="$2?t=${Date.now()}"`);
+    document.write(fresh.replace(/<head>/i, '<head>' + stub));
+    document.close();
+  })();
+</script>
