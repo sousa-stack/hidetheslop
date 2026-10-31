@@ -54,6 +54,17 @@ Hide the Slop stays free and open source, on every platform we can reach. It sho
 14. **Store listings:** five 1280 × 800 screenshots, Chrome's 440 × 280 promo tile, and a written reason for "read all sites". Keep Facebook branding out of screenshots.
 15. **Name check:** search both stores and the trademark database for "Hide the Slop".
 
+## Going public
+
+The repo's history becomes public along with its files. An audit on 2026-10-31 found no secrets and no real pictures in the history, using pattern searches, not a dedicated scanner. Do these around launch:
+
+- **Run a secret scanner** such as gitleaks over the full history.
+- **Add `SECURITY.md`,** saying how to report a problem, because a public API needs one.
+- **Say in the README and `eval/README.md`** that the accuracy numbers can't be reproduced from a clone, because `test-images/` stays private.
+- **Decide about the commit email.** Every commit shows Kevin's Gmail, and history also has a Chrome profile name, a mention of his employer and local paths that are now gone from the current files. Rewriting history can replace all of that, and is safe only while he's the sole contributor. Do it once, as the last step before going public, then force-push.
+- **Look again at `vision-examples.json`.** It publishes 512-number summaries of 57 real posts. The extension ships them anyway, but replacing them is worth considering when the training set grows.
+- **After going public,** protect `main`, because a push to it deploys, and turn on secret scanning and Dependabot alerts. They're free on public repos.
+
 ## Shared ratings
 
 Design: [CROWD-API.md](CROWD-API.md). Build plan: [plans/2026-10-30-local-api.md](plans/2026-10-30-local-api.md).

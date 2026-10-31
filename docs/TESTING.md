@@ -82,7 +82,7 @@ This shows the real `options.html` with faked APIs and sample data, and always l
 
 ## The installed extension in Kevin's real Chrome
 
-Kevin's Chrome profile is called **"Chrome - [removed]"** and is logged into Facebook. Use the Claude in Chrome tools: call `switch_browser` so he can click Connect in the right window, then work only in a new tab group.
+Test in the Chrome profile Kevin uses for Facebook. Use the Claude in Chrome tools: call `switch_browser` so he can click Connect in the right window, then work only in a new tab group.
 
 - **Installing** has to be done by Kevin. Chrome won't let an agent open `chrome://extensions` or the file picker. He goes to `chrome://extensions` → Developer mode → Load unpacked → `~/Projects/hidetheslop/extension/dist/chrome`. After a rebuild he presses the reload arrow on the card.
 - **Controlled check: `extension/test/live.html`.** Serve the top folder on port 8767 and open `http://localhost:8767/extension/test/live.html` in his Chrome. It shows 8 AI and 8 real examples from `test-images/` plus the Stable Diffusion fixture.
