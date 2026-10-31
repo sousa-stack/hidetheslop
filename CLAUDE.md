@@ -16,7 +16,8 @@ Read these before changing things:
 
 - **Never commit `test-images/`.** It holds real people's Facebook posts. Only their 512-number embeddings ship (`extension/src/vision-examples.json`). `.gitignore` covers it; check `git status` before every commit anyway.
 - **Commit and push only when Kevin asks.** So far he has chosen to work directly on `main`.
-- **No `gh`.** Push with plain git over SSH. The remote is `git@github.com:sousa-stack/hidetheslop.git`, which uses his personal key through the plain `github.com` host.
+- **Use `gh` here, only as `sousa-stack`.** For this repo, this replaces the no-`gh` rule in Kevin's global `CLAUDE.md`; that rule still applies everywhere else. This Mac has other `gh` accounts signed in, so run `gh api user --jq .login` first and stop if it doesn't say `sousa-stack`. Pass `--repo sousa-stack/hidetheslop`, and never switch accounts.
+- **Push with plain git over SSH.** The remote is `git@github.com:sousa-stack/hidetheslop.git`, which uses his personal key through the plain `github.com` host.
 - **Commit identity is set in this repo only:** `Kevin Sousa <[removed]>`. His global git identity belongs to his employer ([removed]), so never change the global config or commit from another checkout.
 - End commit messages with the `Co-Authored-By:` line the session asks for. Commit messages here are a short summary plus a bullet list of what changed and why.
 - **Ask before downloading anything** (models, npm packages, Docker images), saying the name, the source and the size.
