@@ -9,6 +9,46 @@ cd extension && node build.mjs && node --test test/meta.test.mjs
 for f in src/*.js; do node --check "$f"; done
 ```
 
+## The API
+
+The tests run against a real Postgres, never a mock. They wipe every table, so they refuse to run unless the database's name contains `test`. There are three ways to run them, and all of them apply the migrations first.
+
+**On your Mac, against a throwaway Postgres.** This starts a temporary cluster with Homebrew's `postgresql@18` on port 54329 and deletes it afterwards:
+
+```bash
+cd api && npm ci && npm run typecheck && ./scripts/test-local.sh
+```
+
+**Against a Postgres you already have.** Set `TEST_DATABASE_URL` to a database whose name contains `test`, such as `hidetheslop_test`. It has to be one you don't mind losing, and it has to be Postgres 14 or newer for `bit_count`. `test-local.sh` uses it instead of starting a cluster.
+
+**On the real versions, in Docker.** Kevin's Mac runs an older Node, so a pass above doesn't prove production works. This runs the same tests on `node:26-alpine` and `postgres:18-alpine`, with a temporary network that it always removes:
+
+```bash
+cd api && ./scripts/test-docker.sh
+```
+
+| File in `api/test/` | What it checks |
+|---|---|
+| `phash.test.ts` | hex and signed bigint round trips, including a top bit that's set |
+| `votes.test.ts` | every rejection on `/v1/votes`, replacing a vote, and the embedding gate |
+| `embeddings.test.ts` | when an embedding is stored or skipped, and canonical base64 |
+| `verdicts.test.ts` | paging, `add` and `remove`, the cache header, no rate-limit headers |
+| `aggregate.test.ts` | verdict boundaries, weights, merging, `seq`, the lock, expiry |
+| `schedule.test.ts` | the run soon after startup, the interval, and that 0 turns both off |
+| `env.test.ts` | the aggregate interval's upper limit, and that errors don't repeat the database password |
+| `privacy.test.ts` | no IP, phash, token or URL in logs on a 202, 400, 404, 413 or a real 500, the body limit, plus rate limits by client |
+| `schema.test.ts` | no column named like an IP, URL, user, email or voter, and no date or time on `votes` |
+| `health.test.ts` | 200, and 503 with a broken database, without leaking the error |
+
+### The production files
+
+- **Compose:** `docker compose -f docker-compose.yml --env-file .env.example config -q`. This needs the Compose plugin, and **Kevin's Mac doesn't have it**: it runs the Homebrew Docker CLI with Colima, so `docker compose` is an unknown command there.
+- **Caddy:** `docker run --rm -v "$PWD/Caddyfile:/etc/caddy/Caddyfile:ro" -e ACME_EMAIL=a@example.com caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile`.
+- **The image:** `docker build -t hidetheslop-api:local api`, then run it with `--read-only --tmpfs /tmp` against a temporary `postgres:18-alpine`. Run `node dist/migrate.js` in it, and check `http://127.0.0.1:3000/health` with busybox `wget` inside the container.
+- **No IPs in Caddy's logs:** take a copy of the `Caddyfile`, add a site that reverse-proxies to a dead port, send it a request, and check that the logs have no `client_ip`. Do the same with the `log default` block removed, which should log it, so you know the check works. Start Caddy with `--network none`, or the real sites will ask Let's Encrypt for certificates. On Colima, only your home folder can be bind-mounted, so use `docker create`, `docker cp` and `docker start` for a config kept anywhere else.
+
+`deploy.sh`, `harden.sh` and `backup.sh` need a droplet, so here they only get `bash -n`. `deploy.sh` and `backup.sh` can also be run with a stub `docker` on the `PATH` and a throwaway git clone, which is enough to check their order and rollback.
+
 ## Fake feed: `extension/test/harness.html`
 
 This page runs the real `content.js` on a fake Instagram-style feed, with the extension APIs faked. It has:

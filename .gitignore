@@ -1,12 +1,16 @@
 # Real people's posts: never publish. The extension ships only their embeddings.
 test-images/
 
+# Secrets
+.env
+
 # Downloaded or generated
 node_modules/
 eval/models/
 eval/embeddings-*.json
 eval/browser-check.json
 extension/dist/
+api/dist/
 
 .DS_Store
 .claude/

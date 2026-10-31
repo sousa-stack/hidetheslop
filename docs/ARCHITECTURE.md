@@ -72,3 +72,22 @@
 - **Cutoffs:** your setting `visualCutoff` (default 0.7) for pictures, and at least 0.9 for video frames.
 - **Why this approach:** ready-made AI-image detectors did badly on flyers, the main kind of slop here. See `eval/README.md`.
 - **Retraining:** after each rating, the background retrains on the shipped examples plus your ratings, which takes about 35 ms.
+
+## The API
+
+`api/` is a small server that pools ratings between people: Fastify, Drizzle and Postgres, behind Caddy and Cloudflare on one droplet. **The extension doesn't call it yet**, so everything above still runs entirely on your computer. The design, the privacy rules and what the extension will need are in [CROWD-API.md](CROWD-API.md).
+
+| File | Job |
+|---|---|
+| `api/src/server.ts` | starts the app, runs the aggregate job on a timer and once soon after startup, shuts down cleanly on SIGTERM |
+| `api/src/app.ts` | builds the Fastify app: logging without IPs, rate limits, the shared error handler, routes |
+| `api/src/routes/` | `health`, `votes`, `embeddings`, `verdicts` |
+| `api/src/db/schema.ts` | the tables; migrations are in `api/drizzle/` and `api/src/migrate.ts` applies them |
+| `api/src/db/client.ts` | the database connection, and `failureCode()`, the only part of a failed query that's safe to log |
+| `api/src/jobs/aggregate.ts` | the hourly job: merges near-duplicates, counts votes, publishes verdicts, expires lone hashes |
+| `api/src/lib/phash.ts` | hashes are 16 hex digits on the wire and a signed bigint in Postgres |
+| `api/src/config.ts`, `api/src/env.ts` | thresholds and limits; the environment, checked at startup |
+| `docker-compose.yml`, `Caddyfile`, `deploy.sh`, `harden.sh`, `backup.sh` | production |
+| `.github/workflows/deploy.yml` | tests the API on Node 26 and Postgres 18, then deploys |
+
+**How the real client address reaches the rate limiter.** Cloudflare sets `CF-Connecting-IP`. Caddy believes it only from Cloudflare's ranges (`trusted_proxies`) and passes it on as `X-Forwarded-For`. The API then trusts exactly one hop, with the function `(_address, hop) => hop < 1`. Don't write that as `trustProxy: 1`: Fastify 5.12 treats a number as trusting nobody, so every client would share Caddy's address and one rate limit. The address stays in memory, for the rate limiter only.

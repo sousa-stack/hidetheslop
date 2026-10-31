@@ -1,0 +1,46 @@
+{
+    email {$ACME_EMAIL}
+
+    # Without this, every 5xx logs the client's IP, the URL and the headers. The API
+    # promises not to log IPs, and that has to hold in front of it too.
+    log default {
+        exclude http.log.error
+    }
+
+    # Lets Caddy believe CF-Connecting-IP, and only when the request came from Cloudflare.
+    # Read from https://www.cloudflare.com/ips-v4 and /ips-v6 on 2026-10-30. Re-check
+    # these now and then, because a new range would otherwise share one rate limit.
+    servers {
+        trusted_proxies static 173.245.48.0/20 103.21.244.0/22 103.22.200.0/22 103.31.4.0/22 141.101.64.0/18 108.162.192.0/18 190.93.240.0/20 188.114.96.0/20 197.234.240.0/22 198.41.128.0/17 162.158.0.0/15 104.16.0.0/13 104.24.0.0/14 172.64.0.0/13 131.0.72.0/22 2400:cb00::/32 2606:4700::/32 2803:f800::/32 2405:b500::/32 2405:8100::/32 2a06:98c0::/29 2c0f:f248::/32
+        client_ip_headers CF-Connecting-IP
+    }
+}
+
+api.hidetheslop.com {
+    encode zstd gzip
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "no-referrer"
+        -Server
+    }
+
+    # Limit request bodies. Votes and hashes are tiny. Caddy reads this as 64,000 bytes,
+    # the same as BODY_LIMIT_BYTES in the API.
+    request_body {
+        max_size 64KB
+    }
+
+    # Without header_up, X-Forwarded-For ends in Cloudflare's edge IP, the API picks that,
+    # and everyone behind one edge shares a rate limit.
+    reverse_proxy api:3000 {
+        header_up X-Forwarded-For {client_ip}
+    }
+}
+
+status.hidetheslop.com {
+    # Uptime Kuma has its own login. Keep it off the main domain.
+    reverse_proxy uptime:3001
+}

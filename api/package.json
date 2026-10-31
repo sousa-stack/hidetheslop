@@ -1,0 +1,33 @@
+{
+  "name": "hidetheslop-api",
+  "version": "0.1.0",
+  "description": "Pools ratings for Hide the Slop without collecting personal data or browsing history.",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=26"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/server.js",
+    "migrate": "tsx src/migrate.ts",
+    "db:generate": "drizzle-kit generate",
+    "test": "node --import tsx --test --test-concurrency=1 \"test/**/*.test.ts\""
+  },
+  "dependencies": {
+    "@fastify/rate-limit": "11.2.1",
+    "drizzle-orm": "0.45.4",
+    "fastify": "5.12.7",
+    "fastify-type-provider-zod": "7.0.0",
+    "postgres": "4.0.0",
+    "zod": "4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "26.6.6",
+    "drizzle-kit": "0.31.11",
+    "tsx": "4.23.15",
+    "typescript": "7.0.2"
+  }
+}

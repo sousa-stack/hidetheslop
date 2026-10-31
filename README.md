@@ -57,11 +57,14 @@ If Firefox didn't grant site access at install, the settings page opens with an 
 
 To check an image, the extension downloads that image again from the server the page already loaded it from, without cookies: once per picture, whole if the picture check is on, or just the first 512 KB for the metadata check alone. Hosts known to strip metadata (Facebook's and Instagram's) aren't downloaded just for that. Nothing is sent to any other server. The only other download is the model, from Hugging Face, when you turn the picture check on. There are no analytics. Settings sync through your browser account.
 
+Shared ratings are planned, and aren't in the extension yet. They'll be off until you turn them on, and will send only what you explicitly rate, as a hash and a vote. Nothing stored will identify you. Checking pictures will stay on your device, so no server learns what you look at. The design is in [docs/CROWD-API.md](docs/CROWD-API.md).
+
 ## Develop
 
 | Folder | What's in it |
 |---|---|
 | `extension/` | The extension. `src/` is the source; `build.mjs` adds each browser's manifest. |
+| `api/` | The server for shared ratings, which the extension doesn't call yet. |
 | `eval/` | Scripts that compared detectors and train the picture classifier. `npm install` there, then `./get-models.sh`. |
 | `brand/` | The logo. `extension/tools/make_icons.sh` makes the toolbar icons from it. |
 | `test-images/` | Hand-sorted example pictures, **not in git**: they're real people's posts. The extension ships only their 512-number summaries. |
