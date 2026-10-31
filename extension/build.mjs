@@ -4,7 +4,7 @@
 import { cpSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
-const version = '1.5.0';
+const version = '1.5.1';
 
 const base = {
   manifest_version: 3,

@@ -5,6 +5,9 @@ Nothing changes for people using the extension yet.
 - `api/`: a server for pooling ratings without personal data or browsing history. The extension doesn't call it yet. See `docs/CROWD-API.md`.
 - Docker, Caddy, deploy and hardening files for one droplet behind Cloudflare, none of it live yet.
 
+## 1.5.1
+- Fixed a Firefox memory leak with the picture check on. Firefox stops the background page after 30 idle seconds and never freed the model's WebAssembly memory, so each wake-up left about 245 MB behind, up to 12 GB after 10 days. The model now runs in a worker, so its memory goes when the page does: about 60 to 90 MB while idle, about 410 MB while checking pictures.
+
 ## 1.5.0
 - Each picture is downloaded once for both the metadata and picture checks, and Facebook and Instagram images aren't downloaded just for metadata.
 - Stable onnxruntime-web 1.31.1 instead of a development build.

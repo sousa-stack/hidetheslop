@@ -66,7 +66,7 @@
 
 ## The picture classifier
 
-- **Model:** CLIP ViT-B/32 image encoder, int8 ONNX, 89 MB. The `Xenova/clip-vit-base-patch32` revision is pinned in `vision.js`.
+- **Model:** CLIP ViT-B/32 image encoder, int8 ONNX, 89 MB. The `Xenova/clip-vit-base-patch32` revision is pinned in `vision.js`. It runs in a worker (`ort.env.wasm.proxy`), because Firefox never frees WebAssembly memory left in a stopped background page.
 - **Preprocessing:** shortest side to 224, centre crop, CLIP normalisation. The result is a 512-number embedding, normalised to unit length.
 - **Classifier:** logistic regression (`train.js`). Classes are weighted equally, and each of your ratings counts 3 times (`RATING_WEIGHT`).
 - **Cutoffs:** your setting `visualCutoff` (default 0.7) for pictures, and at least 0.9 for video frames.

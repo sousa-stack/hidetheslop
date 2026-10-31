@@ -68,6 +68,10 @@ var SlopVision = (() => {
       if (!res) throw new Error('model not downloaded');
       ort.env.wasm.wasmPaths = SLOP_API.runtime.getURL('ort/');
       ort.env.wasm.numThreads = 1; // extension pages aren't cross-origin isolated
+      // Firefox stops the background page after 30 idle seconds and never frees a
+      // WebAssembly heap that lived in it, so each wake-up left about 245 MB behind.
+      // A worker's memory goes when the page does.
+      ort.env.wasm.proxy = true;
       const bytes = new Uint8Array(await res.arrayBuffer());
       return ort.InferenceSession.create(bytes, { executionProviders: ['wasm'] });
     })().catch((e) => {

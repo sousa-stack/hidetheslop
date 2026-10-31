@@ -97,6 +97,7 @@ Nothing is live yet. `docs/CROWD-API.md` has Kevin's going-live checklist.
 
 - **Facebook changes its markup.** Feed posts are `div[data-virtualized]`; offscreen ones are empty placeholders with `data-virtualized="true"`. The old `aria-posinset` and `role="article"` markers mostly don't match the feed any more. Feed ads say "Ad" through a hidden `aria-labelledby` target, or spell "Sponsored" as jumbled one-letter fragments. Site rules are the `SITES` list at the top of `content.js`. When a site breaks, look at its real DOM (see docs/TESTING.md) before guessing.
 - **Chrome's service worker can't run the model.** It runs in `offscreen.html`, while Firefox runs it in the background page. Both paths have to be tested.
+- **Firefox stops the background page after 30 idle seconds and never frees WebAssembly memory that lived in it.** That leaked 12 GB until 1.5.1. Keep `ort.env.wasm.proxy = true` in `vision.js`, so the model runs in a worker whose memory goes when the page does. Activity Monitor can hide this kind of leak, because the memory gets compressed.
 - **Firefox doesn't draw `::before` on `<input>`.** That's why the Settings switches are drawn with a gradient.
 - **The in-app browser pane, when hidden, doesn't report what's on screen**, so IntersectionObserver never fires. The harness replaces IntersectionObserver for this reason. Treat timing numbers from a hidden pane as meaningless.
 - **Browsers cache the test server's files.** Use a new port, or the cache-busting in `test/options-preview.html`, when a change "doesn't show up".
