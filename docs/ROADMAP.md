@@ -29,7 +29,7 @@ Hide the Slop stays free and open source, on every platform we can reach. It sho
    - **How:** ratings exported from Settings → `cd eval && node probe.mjs --with <file> --export`, or image files dropped in `test-images/`. Report the new leave-one-out numbers. Early testers can do this with **Save to a file**, which exports only embeddings, because few pictures will reach 3 raters while there are few users.
    - **Clean up:** `test-images/` has one near-identical pair with the same label, which slightly flatters the leave-one-out score.
 2. **Retest in Firefox.** Kevin last used it in Firefox around version 1.1. Since then 1.2–1.5 changed the background page (the model, ratings, one download). Test with `about:debugging`, then `test/live.html`.
-   - **Memory:** the 12 GB leak Kevin saw in Firefox's WebExtensions process was ours, and 1.5.1 fixes it. Still to confirm on a real feed: scroll and pause a few times, and check memory stays flat. It's untested on Firefox versions older than 159, and the extension's minimum is 128.
+   - **Memory:** the 12 GB leak Kevin saw in Firefox's WebExtensions process was ours, and 1.5.1 fixes it. He confirmed it in real use in Firefox and Chrome on 2026-10-31. It's untested on Firefox versions older than 159, and the extension's minimum is 128.
 3. **Host the model ourselves.** Put a copy on hidetheslop.com, checked by the same SHA-256 hash, and fall back to Hugging Face. Right now one Hugging Face account going away breaks the picture check.
 4. **Privacy policy page.** Both stores require one, because the extension reads every site. The truth is simple:
    - Pictures are re-downloaded from where the page got them, without cookies.
