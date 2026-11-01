@@ -51,14 +51,10 @@ h1 { text-align: center; }
 .demo-bar span { flex: 1; }
 .demo-bar button { all: unset; cursor: pointer; color: inherit; text-decoration: underline; }
 
-.after { margin: 0 40px; padding: 18px 0 30px; border-top: 2px solid var(--rule); }
-.after p { margin: 4px 0; }
-
 @media (max-width: 720px) {
   .specimen { grid-template-columns: 1fr; justify-items: center; gap: 16px; }
   .specimen img { width: 180px; height: 180px; order: -1; }
   .notes { gap: 6px; width: 100%; text-align: center; }
   .notes li { justify-content: center; }
   .notes li::after, .notes.right li::before { display: none; }
-  .after { margin: 0 18px; }
 }

@@ -48,6 +48,14 @@ h1 { margin: 0; font: 700 clamp(46px, 12.4vw, 112px)/.95 var(--display); font-st
 /* --text-cap-top is how far down the text beside the word starts, so their tops line up. */
 .line h2 { margin: calc(var(--text-cap-top, 0px) + .045em) 0 0; font: 700 clamp(60px, 9vw, 84px)/.9 var(--display); font-stretch: condensed; letter-spacing: .01em; text-transform: uppercase; }
 
+.after { margin: 0 40px; padding: 18px 0 30px; border-top: 2px solid var(--rule); }
+.after p { margin: 4px 0; }
+/* The signature at the foot of the page, like a printer's mark on a poster. */
+.after .credit { margin-top: 16px; font-size: 13px; font-style: italic; letter-spacing: .13em; text-align: center; text-transform: uppercase; }
+.credit a { color: var(--ink); text-decoration: none; }
+.credit a:hover { color: var(--red); text-decoration: underline; }
+.credit a:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+
 /* On/off switches. Drawn with a gradient rather than ::before, which Firefox doesn't
    render on inputs. */
 .switch-input {
@@ -65,4 +73,5 @@ h1 { margin: 0; font: 700 clamp(46px, 12.4vw, 112px)/.95 var(--display); font-st
   .notice { padding: 16px 18px; }
   .line { grid-template-columns: 1fr; gap: 8px; margin: 0 18px; }
   .line h2 { margin-top: 0; }
+  .after { margin: 0 18px; }
 }

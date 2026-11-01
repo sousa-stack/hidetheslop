@@ -38,7 +38,7 @@ api/                the server: Fastify, TypeScript, Drizzle, Postgres
 docker-compose.yml, Caddyfile, deploy.sh, harden.sh, backup.sh   production
 .github/workflows/  tests the API and deploys it
 eval/               scripts that compared detectors and train the picture classifier
-brand/              the logo and its source (Kevin drew it; don't replace it with generated art). Not under MIT
+brand/              the logo and its source, made by Kevin from two SVG Repo icons (see brand/README.md). Not under MIT. Don't replace it with generated art
 test-images/        private example pictures (ai/, real/). Not in git
 docs/               architecture, testing, roadmap
 ```

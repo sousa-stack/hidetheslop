@@ -18,7 +18,7 @@ Hide the Slop stays free and open source, on every platform we can reach. It sho
 - Speed is fine: the page-wide label search takes about 1 ms on Facebook.
 - One download per picture. Hosts that strip metadata aren't downloaded just for the metadata check.
 - Stable onnxruntime-web 1.31.1 instead of a dev build.
-- Kevin's logo, the redesigned Settings page, MIT license, README.
+- The logo, the redesigned Settings page, MIT license, README.
 
 ## Before launch: must do
 

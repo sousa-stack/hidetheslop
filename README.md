@@ -87,4 +87,5 @@ Working on the code, or an AI agent picking it up? Start with [CLAUDE.md](CLAUDE
 The code is MIT, see [LICENSE](LICENSE). The logo and icons aren't: see [brand/README.md](brand/README.md). Built on:
 
 - [onnxruntime-web](https://github.com/microsoft/onnxruntime) (MIT, Microsoft), included in `extension/src/ort/`.
+- [Noto Emoji](https://github.com/googlefonts/noto-emoji) (Google) for the robot in the logo, and a CC0 icon from [SVG Repo](https://www.svgrepo.com) for the red sign. See [brand/README.md](brand/README.md).
 - [CLIP](https://github.com/openai/CLIP) ViT-B/32 (MIT, OpenAI), in the ONNX conversion by [Xenova](https://huggingface.co/Xenova/clip-vit-base-patch32). It's downloaded when you turn on the picture check, not included here.

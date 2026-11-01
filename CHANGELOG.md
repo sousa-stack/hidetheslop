@@ -5,6 +5,10 @@ Nothing changes for people using the extension yet.
 - `api/`: a server for pooling ratings without personal data or browsing history. The extension doesn't call it yet. See `docs/CROWD-API.md`.
 - Docker, Caddy, deploy and hardening files for one droplet behind Cloudflare, none of it live yet.
 
+## 1.6.1
+- A small "Made by Kevin Sousa and a clanker" credit at the foot of the welcome and Settings pages. It's a plain link, so nothing is sent unless you click it.
+- Credit for the two icons in the logo, and their license texts, in `icons/NOTICE.txt`.
+
 ## 1.6.0
 - A welcome page opens on first install. It shows what's already working, offers to turn on the picture check, which is off by default, and lets you try the Hide slop button. Firefox users who haven't granted site access can do that there too.
 - Redesigned Settings page and popup, matching the welcome page: a printed-poster look with big words and ruled rows. Settings now fits on a phone.
@@ -26,7 +30,7 @@ Found by testing on a real Facebook feed in Chrome:
 - Facebook's "Ad" label and its scrambled "Sponsored" are detected.
 
 ## 1.3.0
-- Kevin's logo for all icons.
+- A new logo for all icons, which Kevin made from two SVG Repo icons.
 - A **Hide slop** button appears when you rest the mouse on a big picture; it does the same as right-click → Hide this as AI slop.
 - Redesigned Settings page: larger text, the logo's red, round switches, cards, and the picture check up front.
 
