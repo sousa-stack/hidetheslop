@@ -28,14 +28,8 @@ button.primary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2p
 
 .sheet { max-width: 880px; margin: 40px auto; background: var(--paper); }
 
-/* The amber plate. Two tiled dot layers make the printed speckle. */
-.plate {
-  padding: 24px 40px 38px;
-  background:
-    radial-gradient(circle, rgba(150, 90, 0, .28) 1px, transparent 1.4px) 0 0 / 23px 19px,
-    radial-gradient(circle, rgba(150, 90, 0, .2) .8px, transparent 1.2px) 7px 11px / 37px 31px,
-    var(--amber);
-}
+/* The amber plate. Keep it flat: dotted textures have become an AI slop tell. */
+.plate { padding: 24px 40px 38px; background: var(--amber); }
 h1 { margin: 0; font: 700 clamp(46px, 12.4vw, 112px)/.95 var(--display); font-stretch: condensed; letter-spacing: .01em; text-transform: uppercase; transform: translateY(var(--cap-nudge)); }
 
 .notice { margin: 0; padding: 18px 40px; background: var(--ink); color: var(--paper); }

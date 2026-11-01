@@ -79,7 +79,7 @@ Design: [CROWD-API.md](CROWD-API.md). Build plan: [plans/2026-10-30-local-api.md
 
 ## The website
 
-One static page on Cloudflare Pages or GitHub Pages, with no tracking scripts or cookies:
+A static site in `site/`, hosted on Cloudflare Workers with no tracking scripts or cookies. Built, not deployed yet:
 - an install button that detects the visitor's browser
 - a before-and-after feed demo
 - how it works

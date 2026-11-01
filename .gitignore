@@ -10,6 +10,7 @@ eval/models/
 eval/embeddings-*.json
 eval/browser-check.json
 extension/dist/
+site/dist/
 api/dist/
 
 .DS_Store

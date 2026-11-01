@@ -12,8 +12,6 @@ function offerDone(text, on) {
   if (!on) return;
   $('pictureRule').textContent = 'Hide AI pictures nobody labeled';
   $('pictureRule').classList.remove('off');
-  document.querySelector('.notes .pending').textContent = 'Spots AI pictures!';
-  document.querySelector('.notes .pending').classList.remove('pending');
 }
 
 (async () => {

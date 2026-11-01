@@ -13,6 +13,10 @@ Noto Emoji's README says its image resources are under Apache 2.0, but its `LICE
 
 Vectors and icons by [SVG Repo](https://www.svgrepo.com).
 
+## The dog
+
+Kevin Sousa took the photo in `site/public/images/dog.jpg`. It isn't covered by the MIT license either.
+
 ## Using the logo
 
 The MIT license for the rest of this repo doesn't cover the files in this folder, or the icons made from them in `extension/src/icons/`. The two original icons stay under their own licenses, and nothing here claims ownership of them. If you publish a fork, use your own name and icons.

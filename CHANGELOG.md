@@ -5,6 +5,10 @@ Nothing changes for people using the extension yet.
 - `api/`: a server for pooling ratings without personal data or browsing history. The extension doesn't call it yet. See `docs/CROWD-API.md`.
 - Docker, Caddy, deploy and hardening files for one droplet behind Cloudflare, none of it live yet.
 
+## 1.7.1
+- Flat amber headers on the welcome, Settings and popup pages, without the dotted background.
+- A simpler welcome page header: the logo and one line, instead of four callouts.
+
 ## 1.7.0
 - A better picture check, retrained on 87 AI and 118 real pictures instead of 25 and 32. In testing it caught 78 of 87 AI pictures and wrongly flagged 6 of 118 real ones.
 - The "How sure before hiding" setting now does something. Scores used to land on almost exactly 0% or 100%, because the classifier was too confident.

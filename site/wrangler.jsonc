@@ -1,0 +1,11 @@
+{
+  // hidetheslop.com. A plain static site: no Worker script runs, so requests are free.
+  // Build first with: node build.mjs
+  "name": "hidetheslop-site",
+  "compatibility_date": "2026-11-01",
+  "assets": { "directory": "./dist" },
+  "routes": [
+    { "pattern": "hidetheslop.com", "custom_domain": true },
+    { "pattern": "www.hidetheslop.com", "custom_domain": true }
+  ]
+}

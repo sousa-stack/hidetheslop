@@ -1,0 +1,60 @@
+/* The website. The shared look is copied from the extension's poster.css at build time. */
+:root { --text-cap-top: 6.3px; }
+a { color: var(--red); font-weight: 600; }
+a:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+h1 { text-align: center; }
+
+.mark { display: block; width: 240px; height: 240px; margin: 22px auto 0; }
+.tagline { margin: 18px 0 0; font-size: 26px; font-weight: 700; line-height: 1.2; text-align: center; }
+.pitch { margin: 6px 0 0; font-size: 17px; text-align: center; }
+.install { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 20px; }
+.soon { padding: 9px 14px; border: 2px solid var(--ink); border-radius: 4px; font-weight: 600; }
+
+.copy p { margin: 10px 0 0; }
+.copy .rule { margin: 0 0 8px; font-size: 21px; font-weight: 700; line-height: 1.25; }
+.copy .rule.next { margin-top: 18px; }
+.choices { margin-top: 16px; }
+
+.feed { display: grid; gap: 10px; margin-top: 14px; }
+.post > div:not(.bar) { display: grid; place-items: center; align-content: center; gap: 2px; min-height: 104px; padding: 12px; border: 2px solid var(--ink); text-align: center; }
+.post b { font-size: 18px; }
+.post span { font-size: 14px; }
+.flyer { background: linear-gradient(120deg, #f59e0b, #dc2626 60%, #7c3aed); color: #fff; }
+.flyer.two { background: linear-gradient(120deg, #06b6d4, #7c3aed 60%, #db2777); }
+.post > div.photo { padding: 0; gap: 0; background: #fff; }
+.photo img { display: block; width: 100%; height: auto; }
+.photo p { display: grid; gap: 2px; margin: 0; padding: 10px 12px; }
+.feed.clean .slop > div:not(.bar) { display: none; }
+.feed.clean .slop .bar { display: flex !important; }
+.bar { gap: 12px; align-items: center; padding: 8px 12px; border: 1px dashed rgba(127, 127, 127, .55); border-radius: 8px; background: rgba(127, 127, 127, .08); color: #6b6b6b; font: 13px/1.4 system-ui, sans-serif; }
+.post .bar b { color: var(--red); font-size: 13px; font-weight: 600; }
+.post .bar span { font-size: 13px; }
+.bar span:nth-child(2) { flex: 1; }
+.bar .show { text-decoration: underline; }
+
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.stats strong { display: block; font: 700 64px/.95 var(--display); font-stretch: condensed; }
+.stats span { font-weight: 600; }
+
+.faq details { padding: 12px 0; border-top: 1px solid var(--rule); }
+.faq details:first-child { padding-top: 0; border-top: 0; }
+.faq summary { cursor: pointer; font-size: 18px; font-weight: 700; }
+
+.after .links { text-align: center; }
+
+/* The privacy policy is for reading, so it drops the big-word rows. */
+.plate.short { display: flex; align-items: center; gap: 20px; padding: 22px 40px; }
+.plate.short img { display: block; width: 96px; height: 96px; }
+.plate.short h1 { flex: 1; font-size: clamp(46px, 9vw, 76px); text-align: left; }
+.policy { max-width: 680px; margin: 0 auto; padding: 28px 40px 16px; }
+.policy .lead { margin: 0; font-size: 20px; font-weight: 600; line-height: 1.4; }
+.policy .fine { color: var(--muted); font-size: 15px; }
+.policy h2 { margin: 28px 0 6px; font: 700 34px/1 var(--display); font-stretch: condensed; letter-spacing: .01em; text-transform: uppercase; }
+.policy li { margin-top: 6px; }
+
+@media (max-width: 720px) {
+  .mark { width: 180px; height: 180px; }
+  .plate.short { padding: 18px; gap: 14px; }
+  .plate.short img { width: 64px; height: 64px; }
+  .policy { padding: 22px 18px 12px; }
+}

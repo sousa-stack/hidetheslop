@@ -35,6 +35,7 @@ api/                the server: Fastify, TypeScript, Drizzle, Postgres
   src/              routes/, db/schema.ts, jobs/aggregate.ts, config.ts
   drizzle/          generated migrations, committed
   test/             tests against a real Postgres
+site/               hidetheslop.com and the privacy policy; build.mjs writes dist/, wrangler.jsonc deploys it
 docker-compose.yml, Caddyfile, deploy.sh, harden.sh, backup.sh   production
 .github/workflows/  tests the API and deploys it
 eval/               scripts that compared detectors and train the picture classifier
@@ -62,7 +63,7 @@ To load it: Chrome uses `chrome://extensions` → Developer mode → Load unpack
 - Comments explain *why* in a sentence or two, in the voice of the existing code. Match the surrounding density.
 - Page UI we inject (bars, the hover button) lives in shadow DOM, so site CSS can't touch it. Never modify the page's own images.
 - Settings defaults are in `extension/src/common.js`. A new setting needs a default there and a control in `options.html`/`options.js`. The options page wires every `input[data-key]` checkbox automatically.
-- The popup, welcome and Settings pages share a printed-poster look that Kevin chose: amber, paper, ink and the logo's red `#c80000`, with big condensed words and ruled rows. It's in `extension/src/poster.css`, with one extra stylesheet per page, and it deliberately ignores dark mode.
+- The popup, welcome and Settings pages share a printed-poster look that Kevin chose: amber, paper, ink and the logo's red `#c80000`, with big condensed words, ruled rows and flat color. No dotted, halftone or speckled textures, which Kevin ruled out as an AI slop tell. It's in `extension/src/poster.css`, with one extra stylesheet per page, and it deliberately ignores dark mode.
 - User-facing copy says "you" and "your", never "we" or "our". It's open source, and people should feel they own it, not that they're customers of a service. The picture check is "your robot", and it's fine to be playful about it.
 - Extension pages never load web fonts, because that would send a request nobody agreed to. The poster look uses condensed fonts people already have.
 
