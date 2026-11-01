@@ -23,8 +23,8 @@ Hide the Slop stays free and open source, on every platform we can reach. It sho
 ## Before launch: must do
 
 1. **More training examples.** This is the biggest risk to people's first impression.
-   - **Current set:** 25 AI and 32 real images, nearly all from one feed and area.
-   - **Gaps:** cartoon or caricature-style AI (an AI van wrap got through), video frames, ordinary ads (a music-software screen recording was wrongly flagged), and human-made template flyers (still the main false positives).
+   - **Current set:** 87 AI and 118 real unique images, trained in 1.7.0. Mostly from one feed and area. Keep duplicates out: they inflate the numbers, and `test-images/duplicates/` holds the ones moved aside.
+   - **Gaps:** human-made flyers and promo graphics (still the main false positives), AI edits of real photos, realistic AI food, and video frames.
    - **Target:** 200 or more of each kind.
    - **How:** ratings exported from Settings → `cd eval && node probe.mjs --with <file> --export`, or image files dropped in `test-images/`. Report the new leave-one-out numbers. Early testers can do this with **Save to a file**, which exports only embeddings, because few pictures will reach 3 raters while there are few users.
    - **Clean up:** `test-images/` has one near-identical pair with the same label, which slightly flatters the leave-one-out score.
@@ -62,7 +62,7 @@ The repo's history becomes public along with its files. An audit on 2026-10-31 f
 - **Add `SECURITY.md`,** saying how to report a problem, because a public API needs one.
 - **Say in the README and `eval/README.md`** that the accuracy numbers can't be reproduced from a clone, because `test-images/` stays private.
 - **Decide about the commit email.** Every commit shows Kevin's Gmail, and history also has a Chrome profile name, a mention of his employer and local paths that are now gone from the current files. Rewriting history can replace all of that, and is safe only while he's the sole contributor. Do it once, as the last step before going public, then force-push.
-- **Look again at `vision-examples.json`.** It publishes 512-number summaries of 57 real posts. The extension ships them anyway, but replacing them is worth considering when the training set grows.
+- **Look again at `vision-examples.json`.** It publishes 512-number summaries of 205 real posts. The extension ships them anyway, but replacing them is worth considering when the training set grows.
 - **After going public,** protect `main`, because a push to it deploys, and turn on secret scanning and Dependabot alerts. They're free on public repos.
 
 ## Shared ratings
@@ -70,7 +70,7 @@ The repo's history becomes public along with its files. An audit on 2026-10-31 f
 Design: [CROWD-API.md](CROWD-API.md). Build plan: [plans/2026-10-30-local-api.md](plans/2026-10-30-local-api.md).
 
 16. **The API and its deploy files, running locally.** Fastify, Drizzle and Postgres in `api/`, with the fixed Docker, Caddy and deploy files at the top of the repo. Built and tested locally; not deployed. The compose file and the GitHub workflow haven't run yet.
-17. **Same-template flyer test.** Compare pHashes of flyers from the same template before the extension sends anything. They might collide, and they're already the main false positive.
+17. **Same-template flyer test.** Compare pHashes of flyers from the same template before the extension sends anything. They might collide, and they're already the main false positive. First result: one same-template pair came out 12 bits apart, safely above the 3-bit match limit. Test more pairs before relying on it.
 18. **Voting in the extension.** Off by default, batched, and with the README, privacy policy, store listings and Firefox data permissions updated in the same release. The list is in CROWD-API.md.
 19. **Verdict downloads in the extension.** Match locally, then hide with a bar saying the crowd flagged it. Comes after enough pictures reach 5 voters.
 20. **Go live.** Follow Kevin's checklist in CROWD-API.md.

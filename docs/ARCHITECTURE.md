@@ -72,7 +72,7 @@
 - **Classifier:** logistic regression (`train.js`). Classes are weighted equally, and each of your ratings counts 3 times (`RATING_WEIGHT`).
 - **Cutoffs:** your setting `visualCutoff` (default 0.7) for pictures, and at least 0.9 for video frames.
 - **Why this approach:** ready-made AI-image detectors did badly on flyers, the main kind of slop here. See `eval/README.md`.
-- **Retraining:** after each rating, the background retrains on the shipped examples plus your ratings, which takes about 35 ms.
+- **Retraining:** after each rating, the background retrains on the shipped examples plus your ratings, which takes about 0.2–0.4 seconds. A new version rebuilds your classifier from your ratings when it installs.
 
 ## The API
 

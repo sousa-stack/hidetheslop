@@ -261,6 +261,14 @@ api.runtime.onInstalled.addListener(async ({ reason }) => {
     api.tabs.create({ url: api.runtime.getURL('welcome.html') }).catch(() => {});
     return;
   }
+  // Ratings give you your own retrained classifier, which a new version's examples
+  // wouldn't reach until your next rating.
+  if (reason === 'update') {
+    const { visionRatings } = await api.storage.local.get('visionRatings');
+    if (visionRatings) {
+      await retrain(visionRatings).then((visionModel) => api.storage.local.set({ visionModel })).catch(() => {});
+    }
+  }
   // Firefox lets people install without granting site access; nothing works until they do.
   const granted = await api.permissions.contains({ origins: SLOP_ORIGINS }).catch(() => true);
   if (!granted) api.runtime.openOptionsPage();

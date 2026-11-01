@@ -5,8 +5,10 @@
 var SlopTrain = (() => {
   // X: unit-length embeddings, y: 1 = AI, 0 = real. sampleWeight lets your own
   // corrections count for more than the shipped examples. Both classes end up with
-  // equal total weight, so having more of one kind doesn't tilt it.
-  function train(X, y, { sampleWeight, lambda = 1e-3, iters = 400, lr = 2 } = {}) {
+  // equal total weight, so having more of one kind doesn't tilt it. The lambda keeps
+  // scores from all landing on 0% or 100%, which made the cutoff setting do nothing.
+  // Raise lr and training stops converging at this lambda.
+  function train(X, y, { sampleWeight, lambda = 0.01, iters = 800, lr = 1 } = {}) {
     const n = X.length;
     const d = X[0].length;
     const scale = Math.sqrt(d); // embeddings are unit length; spread them out

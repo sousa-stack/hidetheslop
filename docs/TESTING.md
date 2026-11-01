@@ -72,7 +72,7 @@ Open `http://localhost:8767/extension/test/harness.html` and read each post's `d
 ## Real model in a browser: `eval/test-vision.html`
 
 This runs the real `background.js` and `vision.js` with the real model and stubbed APIs. It needs `eval/models/` (`cd eval && npm install && ./get-models.sh`) and `eval/browser-check.json` (`node browser-check.mjs`). Open `http://localhost:8767/eval/test-vision.html` and wait about a minute for `window.result`. It checks:
-- **Scores** match the Mac (`maxDiff` around 0.001, `flips: 0`).
+- **Scores** match the Mac: `flips: 0` is what counts. `maxDiff` can reach about 0.15, because the browser and the Mac resize pictures slightly differently, and scores in the middle of the range show that.
 - **Rating** a picture moves its score and switching the rating replaces it.
 - **Downloads:** each picture is fetched once for both checks, and zero times on hosts that strip metadata.
 

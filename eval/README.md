@@ -19,18 +19,18 @@ The example pictures are in `../test-images/ai` and `../test-images/real`. They'
 | `sheet.mjs out.jpg <dir> <prefix>…` | A labelled thumbnail grid of chosen images, for eyeballing mistakes. |
 | `compare.mjs` | The original comparison of three ready-made detectors, kept as a record. Their models were deleted; the comment at the top says how to get them back. |
 
-## What we found (October 2026, 57 images: 25 AI, 32 real)
+## What we found (November 2026, 205 unique images: 87 AI, 118 real)
 
-Each image was scored by a classifier that hadn't seen it, at a 70% cutoff:
+Each image was scored by a classifier that hadn't seen it, at a 70% cutoff. Duplicates were removed first, because a copy of the test picture in the training set inflates the score. The training settings were tuned on these same images, so treat these numbers as slightly optimistic.
 
 | Approach | AI caught | Real wrongly flagged |
 |---|---|---|
-| **CLIP ViT-B/32 + logistic regression on our examples** (shipped) | **23 / 25** | **3 / 32** |
-| CLIP ViT-L/14 + the same | 23 / 25 | 3 / 32 (and 14× slower) |
+| **CLIP ViT-B/32 + logistic regression on our examples** (shipped) | **78 / 87** | **6 / 118** |
+| CLIP ViT-L/14 + the same | 80 / 87 | 4 / 118 (and about 13× slower) |
 | SigLIP AI-vs-human detector (Ateeqq) | 24 / 24 | 14 / 30 (flags nearly every flyer) |
 | SwinV2 detector (haywoodsloan) | 12 / 24 | 4 / 30 (misses most AI flyers) |
 | ViT detector (prithivMLmods) | scores everything about 80% | n/a |
 
-The ready-made detectors were measured on an earlier set of 54 images. Ready-made detectors learn "AI image versus photo", but most slop here is flyers, so what matters is the difference between a glossy AI flyer and a designed one. A general image model plus a classifier trained on our own examples handles that much better.
+The ready-made detectors were measured on an earlier set of 54 images. The model shipped before this retrain, trained on 57 images, caught 55 of 63 and flagged 8 of 86 on pictures it had never seen. Ready-made detectors learn "AI image versus photo", but most slop here is flyers, so what matters is the difference between a glossy AI flyer and a designed one. A general image model plus a classifier trained on our own examples handles that much better.
 
 After retraining, run `probe.mjs` again and update these numbers, plus the ones in the top README.

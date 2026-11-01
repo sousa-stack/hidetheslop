@@ -50,7 +50,7 @@ Rating the same picture again gives the same token, so the vote is replaced. Tok
 
 The server treats a hash as 64 opaque bits. The extension will compute it this way: grayscale, 32 × 32, 2-D DCT, take the top-left 8 × 8 without the first coefficient, and threshold those 63 values at their median. In row order, the first value kept becomes bit 62 and the last becomes bit 0, so the top bit is always 0. It's sent as 16 lowercase hex digits.
 
-Measured on the 57 pictures in `test-images/`:
+Measured on the first 57 pictures in `test-images/`:
 
 | Change | Distance (out of 63 bits) |
 |---|---|
@@ -61,7 +61,7 @@ Measured on the 57 pictures in `test-images/`:
 
 One pair of near-identical files in `test-images/` was left out of that last row.
 
-So hashes within **3 bits** count as the same picture. Reposts match; crops and screenshots won't. **Not tested yet:** two flyers from the same template, which might collide. Test this before the extension ships votes, because those flyers are already the main false positive.
+So hashes within **3 bits** count as the same picture. Reposts match; crops and screenshots won't. **Barely tested:** flyers from the same template, which might collide. The one pair so far came out 12 bits apart, and 4 true reposts in the examples matched at 0 bits. Test more pairs before the extension ships votes, because those flyers are already the main false positive.
 
 ## How a verdict is reached
 
