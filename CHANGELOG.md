@@ -4,6 +4,15 @@
 Nothing changes for people using the extension yet.
 - `api/`: a server for pooling ratings without personal data or browsing history. The extension doesn't call it yet. See `docs/CROWD-API.md`.
 - Docker, Caddy, deploy and hardening files for one droplet behind Cloudflare, none of it live yet.
+- `scripts/local-stack.sh` runs the real production stack on a Mac and proves it through Caddy, including the real `deploy.sh` and `backup.sh` in a throwaway copy.
+- `backup.sh` can put an encrypted copy of each dump in a private bucket, and mixes rows up first so a dump doesn't keep batches of votes together. `restore.sh` loads the newest dump into a new database, and moves `verdict_seq` forward so clients' cursors keep working.
+- `deploy.sh` now validates a changed `Caddyfile` and restarts Caddy to apply it. Before, a deploy left the old config running.
+- `CONFIRM_MIN_VOTES` can be lowered for testing, and the API warns at startup when it isn't 5. Expiry stays at the promised 5 votes.
+- `extension/src/phash.js`: the exact perceptual hash for pooled ratings, checked in real browsers. The extension doesn't call it yet, and a few reposts still land 4 bits apart. See `docs/CROWD-API.md`.
+
+## 1.7.3
+- Retrained on 224 unique pictures: 93 AI and 131 real. Overall accuracy is about the same: 83 of 93 AI caught and 8 of 131 real wrongly flagged, on a set with more hard pictures.
+- Two held-out human-made flyers dropped from 93% and 32% to 7% and 9%, and AI flyers stayed at 14 of 15. They're from the same series as two pictures it trained on, so this is a good sign, not proof for other human flyers.
 
 ## 1.7.2
 - The model downloads from a copy on Cloudflare, falling back to Hugging Face. Both are checked by the same hash, so the picture check no longer depends on one Hugging Face account.

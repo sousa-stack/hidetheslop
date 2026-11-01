@@ -37,3 +37,29 @@ test('votes has no date or time column', async () => {
   );
   assert.deepEqual(dated, []);
 });
+
+// backup.sh clusters each table on these, so dumps don't keep rows in arrival order. That
+// only mixes rows up if the index really starts with a random id.
+test('the indexes backup.sh clusters on exist and start with a random uuid', async () => {
+  const expected = [
+    ['votes', 'votes_hash_id_token_pk', 'hash_id'],
+    ['hashes', 'hashes_pkey', 'id'],
+    ['embeddings', 'embeddings_hash_id_model_version_pk', 'hash_id'],
+    ['verdicts', 'verdicts_pkey', 'hash_id'],
+  ];
+  for (const [table, index, column] of expected) {
+    const [row] = await db.execute<{ first_column: string; data_type: string }>(sql`
+      select a.attname as first_column, format_type(a.atttypid, a.atttypmod) as data_type
+      from pg_index i
+      join pg_class c on c.oid = i.indexrelid
+      join pg_attribute a on a.attrelid = i.indrelid and a.attnum = i.indkey[0]
+      where c.relname = ${index} and i.indrelid = ${table}::regclass and i.indisprimary
+    `);
+    assert.deepEqual(row, { first_column: column, data_type: 'uuid' });
+  }
+  const [id] = await db.execute<{ column_default: string }>(sql`
+    select column_default from information_schema.columns
+    where table_name = 'hashes' and column_name = 'id'
+  `);
+  assert.equal(id?.column_default, 'gen_random_uuid()');
+});

@@ -36,6 +36,15 @@ echo "==> Building"
 docker compose pull --ignore-buildable
 docker compose build api
 
+# Caught here, while it can still roll back, because the restart below would take the
+# status page and the API down together.
+CADDYFILE_CHANGED=""
+git diff --quiet "$PREV" HEAD -- Caddyfile || CADDYFILE_CHANGED="yes"
+if [ -n "$CADDYFILE_CHANGED" ]; then
+  echo "==> Validating the Caddyfile"
+  docker compose run --rm --no-deps -T caddy caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+fi
+
 # Before the new code serves traffic. Through node, not npm, which wants to write to a
 # read-only filesystem.
 echo "==> Running migrations"
@@ -59,7 +68,16 @@ for i in $(seq 1 20); do
 done
 [ -n "$healthy" ]
 
-# After the trap is gone, and allowed to fail, so a prune can't undo or fail a good deploy.
 trap - ERR
+
+# Caddy reads its config once, and Compose can't see inside the file, so `up` leaves the old
+# config running. Only a restart helps: git replaced the file, and a reload would still read
+# the old one through the mount.
+if [ -n "$CADDYFILE_CHANGED" ]; then
+  echo "==> Restarting Caddy for the new Caddyfile"
+  docker compose restart caddy || { echo "!!! Caddy didn't restart. The API is deployed."; exit 1; }
+fi
+
+# After the trap is gone, and allowed to fail, so a prune can't undo or fail a good deploy.
 docker image prune -f >/dev/null || echo "    image prune failed; the deploy is fine"
 echo "==> Deployed $(git rev-parse --short HEAD)"

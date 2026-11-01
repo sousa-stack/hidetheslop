@@ -5,7 +5,7 @@ Run the quick checks after every change, and the real-browser checks after anyth
 ## Quick checks (seconds)
 
 ```bash
-cd extension && node build.mjs && node --test test/meta.test.mjs test/download.test.mjs
+cd extension && node build.mjs && node --test test/meta.test.mjs test/download.test.mjs test/phash.test.mjs
 for f in src/*.js; do node --check "$f"; done
 ```
 
@@ -32,22 +32,51 @@ cd api && ./scripts/test-docker.sh
 | `phash.test.ts` | hex and signed bigint round trips, including a top bit that's set |
 | `votes.test.ts` | every rejection on `/v1/votes`, replacing a vote, and the embedding gate |
 | `embeddings.test.ts` | when an embedding is stored or skipped, and canonical base64 |
-| `verdicts.test.ts` | paging, `add` and `remove`, the cache header, no rate-limit headers |
-| `aggregate.test.ts` | verdict boundaries, weights, merging, `seq`, the lock, expiry |
+| `verdicts.test.ts` | paging, `add` and `remove`, the cache header, no rate-limit headers, and that raising the threshold unpublishes through `remove` |
+| `aggregate.test.ts` | verdict boundaries, weights, merging, `seq`, the lock, expiry, and that the vote threshold can move while expiry can't |
 | `schedule.test.ts` | the run soon after startup, the interval, and that 0 turns both off |
-| `env.test.ts` | the aggregate interval's upper limit, and that errors don't repeat the database password |
+| `env.test.ts` | the aggregate interval's upper limit, the vote threshold's range, and that errors don't repeat the database password |
 | `privacy.test.ts` | no IP, phash, token or URL in logs on a 202, 400, 404, 413 or a real 500, the body limit, plus rate limits by client |
-| `schema.test.ts` | no column named like an IP, URL, user, email or voter, and no date or time on `votes` |
+| `schema.test.ts` | no column named like an IP, URL, user, email or voter, no date or time on `votes`, and that the indexes `backup.sh` clusters on start with a random id |
 | `health.test.ts` | 200, and 503 with a broken database, without leaking the error |
 
 ### The production files
 
-- **Compose:** `docker compose -f docker-compose.yml --env-file .env.example config -q`. This needs the Compose plugin, and **Kevin's Mac doesn't have it**: it runs the Homebrew Docker CLI with Colima, so `docker compose` is an unknown command there.
+- **Compose:** `docker compose -f docker-compose.yml --env-file .env.example config -q`. Kevin's Mac has the Compose plugin from Homebrew, linked into `~/.docker/cli-plugins`. Don't add `cliPluginsExtraDirs` to `~/.docker/config.json` as Homebrew suggests.
 - **Caddy:** `docker run --rm -v "$PWD/Caddyfile:/etc/caddy/Caddyfile:ro" -e ACME_EMAIL=a@example.com caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile`.
 - **The image:** `docker build -t hidetheslop-api:local api`, then run it with `--read-only --tmpfs /tmp` against a temporary `postgres:18-alpine`. Run `node dist/migrate.js` in it, and check `http://127.0.0.1:3000/health` with busybox `wget` inside the container.
 - **No IPs in Caddy's logs:** take a copy of the `Caddyfile`, add a site that reverse-proxies to a dead port, send it a request, and check that the logs have no `client_ip`. Do the same with the `log default` block removed, which should log it, so you know the check works. Start Caddy with `--network none`, or the real sites will ask Let's Encrypt for certificates. On Colima, only your home folder can be bind-mounted, so use `docker create`, `docker cp` and `docker start` for a config kept anywhere else.
 
-`deploy.sh`, `harden.sh` and `backup.sh` need a droplet, so here they only get `bash -n`. `deploy.sh` and `backup.sh` can also be run with a stub `docker` on the `PATH` and a throwaway git clone, which is enough to check their order and rollback.
+`harden.sh` needs a droplet, so here it only gets `bash -n`. `deploy.sh`, `backup.sh` and `restore.sh` run for real in the next section.
+
+### The whole stack on this Mac
+
+```bash
+scripts/local-stack.sh up      # builds and starts everything, migrating the way deploy.sh does
+scripts/local-stack.sh check   # about 2 minutes, one PASS or FAIL line per check
+scripts/local-stack.sh down    # removes the project's containers, volumes and .local/ files
+```
+
+This Mac is shared, so all of it stays in the Compose project `hidetheslop-local`, with Caddy on ports the system picks, bound to `127.0.0.1`. It runs the real `docker-compose.yml`, plus `docker-compose.local.yml` for those ports. The Caddyfile is generated from the real one, and `check` fails if it differs by more than a `local_certs` line. Passwords are random and live in `.local/`, which git ignores. Never run `docker system prune` or `docker image prune` here, or anything that stops other projects' containers.
+
+`check` goes through Caddy with `curl --resolve`, and covers:
+- Containers healthy, a read-only API, no host port on the API, database or Uptime Kuma, migrations, `/health`, and `/` on the status host, which must not be on Uptime Kuma's database setup page. There's no `/status` route. Caddy has no healthcheck, so it only counts as running.
+- 5 votes with 5 tokens reaching `/v1/verdicts` with the cache header. Restarting the API triggers the job, 30 seconds later.
+- The embedding gate at 2 and 3 votes, a rejected `url` field, and 64,000 bytes accepted against 64,001 refused.
+- A forged `CF-Connecting-IP` not being believed. That passes even with `trusted_proxies` deleted, so a **control** reloads Caddy trusting the bridge subnet, where distinct forged addresses must get separate limits. The probes use `/v1/verdicts`, because votes allow only 60 an hour.
+- No client IP, phash, token or path in the Caddy and API logs, through a 404 and a real 502 with the API stopped. The **control** removes `log default`, and the client IP must then appear. Lines from Caddy's `admin.api` logger are left out, because they're the script's own `caddy reload`.
+- Data surviving `docker compose down` and `up`.
+
+`deploy.sh` and `backup.sh` are never run in the real checkout: `deploy.sh` runs `git checkout`, its rollback would detach `main`, and `docker image prune` reaches every project on the machine. `check` makes a throwaway copy in `.local/copy`, with its own commit and bare origin, leaving `test-images/` out. A `docker` shim in `.local/bin` forces the project name, and turns `image prune` and `compose pull` into no-ops, so neither script gains a local mode. There, it proves:
+- A deploy, a rollback from a build that dies at startup, and the next deploy, which also applies a changed Caddyfile.
+- With no backup settings, a local dump and no rclone.
+- `CLUSTER`: votes are out of id order before, and votes and hashes are in id order in the dump.
+- An encrypted upload with rclone's local backend standing in for R2, behind the same `crypt` remote: the stored name and bytes aren't readable as a dump, and 14 local dumps are kept.
+- The monitor ping, on a good run only, and no secret on a command line, in the output, or left on disk.
+- `restore.sh`: a round trip with matching row counts and `verdict_seq` moved forward, refusing the live database, and refusing a dump with no completion marker.
+- A failed upload exiting non-zero and keeping the local dump.
+
+**What this can't prove:** Cloudflare in front, real certificates, real client IPs, the firewall, `compose pull`, a real Uptime Kuma push monitor, and the real bucket: the S3 backend, the token, the lifecycle rule and the lock. This Mac is arm64 and the droplet will be amd64: every image is published for amd64 and the API has no native modules, but nothing has run on amd64 yet.
 
 ## Fake feed: `extension/test/harness.html`
 
@@ -75,6 +104,28 @@ This runs the real `background.js` and `vision.js` with the real model and stubb
 - **Scores** match the Mac: `flips: 0` is what counts. `maxDiff` can reach about 0.15, because the browser and the Mac resize pictures slightly differently, and scores in the middle of the range show that.
 - **Rating** a picture moves its score and switching the rating replaces it.
 - **Downloads:** each picture is fetched once for both checks, and zero times on hosts that strip metadata.
+
+## The hash in real browsers: `eval/hash-check.html`
+
+`extension/test/phash.test.mjs` proves the arithmetic. This proves browsers hand it the same pixels. It needs `cd eval && npm install` once for sharp, and ffmpeg for the APNG fixture. Everything it writes goes in `eval/hash-results/`, about 720 MB, which stays out of git because hashes of real people's posts are as private as the posts.
+
+```bash
+cd eval && node hash-check.mjs   # the first run makes every variant, about a minute
+open -a "Google Chrome" http://127.0.0.1:8768/
+open -a Firefox http://127.0.0.1:8768/
+open -a Safari http://127.0.0.1:8768/
+node hash-report.mjs             # any time, once the pages say Done
+```
+
+New pictures, such as flyers, need the server restarted, which makes their variants, then a run in each browser before the report sees them. The server only listens on 127.0.0.1. The variants are made once, offline, so every browser hashes identical bytes. Add `?run=2` for a second run, because `open` otherwise just goes to the tab that's already open. **Keep Safari in front on an unlocked Mac.** It suspends a page it isn't showing about 10 seconds in, and the page sits there with no error. Firefox carries on while locked, but takes 12 minutes instead of 1.
+
+**A page isn't an extension**, so run it on an extension page too. Keep the server running, then:
+- **Chrome:** `chrome://extensions` → Developer mode → Load unpacked → `eval/hash-results/extension`.
+- **Firefox:** `about:debugging#/runtime/this-firefox` → Load Temporary Add-on → `eval/hash-results/extension/manifest.json`.
+
+The check opens in its own tab and says Done after about a minute. Remove the extension afterwards. `hash-check.mjs` rebuilds that folder from `eval/hash-ext/` and the real `phash.js` each time it starts, and it's never part of `dist/`.
+
+`hash-report.mjs` prints the table in `CROWD-API.md`, the closest different pairs, the duplicates, browsers against each other, the whole matrix of browser A at one size against browser B at another, and `test-images/flyers/<template>/` when that exists. It ends with a PASS or FAIL for each of: browsers agree within 3 bits on one file, copies stay within 3 across the matrix, and different pictures stay over 3. Trims are known misses and don't count. Distances come in twos, because one value crossing the median pushes another back.
 
 ## Settings page: `extension/test/options-preview.html`
 

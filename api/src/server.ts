@@ -1,17 +1,18 @@
 import { buildApp } from './app.js';
 import { createDb, failureCode } from './db/client.js';
 import { loadEnv } from './env.js';
-import { runAggregate, scheduleAggregate } from './jobs/aggregate.js';
+import { runAggregate, scheduleAggregate, warnAboutThreshold } from './jobs/aggregate.js';
 
 const env = loadEnv();
 const { db, client } = createDb(env.DATABASE_URL);
 const app = await buildApp({ db, logLevel: env.LOG_LEVEL });
+warnAboutThreshold(app.log, env.CONFIRM_MIN_VOTES);
 
 let running: Promise<void> | null = null;
 
 function aggregate(): void {
   if (running) return;
-  running = runAggregate(db)
+  running = runAggregate(db, env.CONFIRM_MIN_VOTES)
     .then(
       () => {},
       (err: unknown) => {

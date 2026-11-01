@@ -39,9 +39,10 @@ site/               hidetheslop.com and the privacy policy
   public/           the pages; poster.css and the logo come from extension/src at build time
   build.mjs         writes dist/; wrangler.jsonc deploys it
   tools/            optimize_images.py (small WebP files from originals/, which isn't in git)
-docker-compose.yml, Caddyfile, deploy.sh, harden.sh, backup.sh   production
+docker-compose.yml, Caddyfile, deploy.sh, harden.sh, backup.sh, restore.sh   production
+scripts/            local-stack.sh (proves the production stack on this Mac), backup-rclone.sh (shared by backup.sh and restore.sh)
 .github/workflows/  tests the API and deploys it
-eval/               scripts that compared detectors and train the picture classifier
+eval/               scripts that compared detectors, train the picture classifier and measure the hash
 brand/              the logo and its source, made by Kevin from two SVG Repo icons (see brand/README.md). Not under MIT. Don't replace it with generated art
 test-images/        private example pictures (ai/, real/). Not in git
 docs/               architecture, testing, roadmap
@@ -51,7 +52,7 @@ docs/               architecture, testing, roadmap
 
 ```bash
 cd extension && node build.mjs                 # builds both browsers
-cd extension && node --test test/meta.test.mjs test/download.test.mjs # detector and model download tests
+cd extension && node --test test/meta.test.mjs test/download.test.mjs test/phash.test.mjs # detector, model download and hash tests
 cd api && npm run typecheck && ./scripts/test-local.sh # API tests on a throwaway Postgres
 cd site && node build.mjs                      # builds the website into dist/
 ```
@@ -97,7 +98,7 @@ The extension's conventions above don't apply here: `api/` is TypeScript with a 
 - **Model:** the `hidetheslop-models` R2 bucket, at `models.hidetheslop.com`. A new model version needs a new key and a new hash in `vision.js`, because the file is cached forever.
 - **Email:** `hello@hidetheslop.com` forwards through Cloudflare Email Routing.
 - The Cloudflare connector can read the account and search the docs, but it can't change DNS, deploy, or connect domains.
-- This Mac runs Docker through Colima and has no Compose plugin, so `docker compose` doesn't work here until Kevin OKs installing it.
+- This Mac runs Docker through Colima, and `docker compose` is the Homebrew plugin. Other projects' containers run here too, so test the stack with `scripts/local-stack.sh`, and never run `deploy.sh` or `docker image prune` in this checkout.
 
 Once the droplet exists:
 

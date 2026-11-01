@@ -9,6 +9,9 @@ node_modules/
 eval/models/
 eval/embeddings-*.json
 eval/browser-check.json
+# Hashes of real people's posts are as private as test-images/.
+eval/hash-results/
+.local/
 extension/dist/
 site/dist/
 api/dist/

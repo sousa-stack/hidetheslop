@@ -1,0 +1,12 @@
+# For scripts/local-stack.sh only, on top of docker-compose.yml, so what gets tested is the
+# real file. On 127.0.0.1 with ports the system picks, because this Mac is shared.
+services:
+  caddy:
+    # Compose adds to `ports` when merging, so 80 and 443 would stay without !override.
+    ports: !override
+      - "127.0.0.1::80"
+      - "127.0.0.1::443"
+    volumes:
+      - ./.local/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # The other generated configs, for the checks that prove the checks can fail.
+      - ./.local/caddy:/etc/caddy/variants:ro

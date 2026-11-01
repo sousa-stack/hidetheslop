@@ -14,12 +14,14 @@ Updated 2026-11-01. Start here.
 - `hello@hidetheslop.com`, forwarding to Kevin's Gmail. Tested.
 
 **Built, not live:**
-- The extension, version 1.7.2. Not in any store.
-- The API in `api/`, 88 tests passing, with its deploy files. There's no droplet yet, and the extension doesn't call it.
+- The extension, version 1.7.3. Not in any store.
+- The API in `api/`, 96 tests passing, with its deploy files. There's no droplet yet, and the extension doesn't call it.
+- The production stack, proven on this Mac by `scripts/local-stack.sh`: 30 checks through the real Compose file and a Caddyfile generated from the real one, including `deploy.sh` rollback and an encrypted backup and restore.
+- The perceptual hash, `extension/src/phash.js`. It isn't called by the extension yet.
 
 **Never run for real:**
-- `docker compose`, because this Mac has no Compose plugin, so the production stack has never started as a whole.
 - `deploy.sh`, `backup.sh` and `harden.sh` on a real server, and the workflow's deploy job. Its test job passes on GitHub.
+- The stack on amd64: this Mac is arm64 and the droplet won't be. Backups to real R2, and the hash on a Chrome offscreen page or a Firefox background page. It has passed on web pages in Chrome, Firefox and Safari, and on extension pages in Kevin's Chrome and Firefox.
 - Real client IPs through Cloudflare.
 - Clicking "Turn it on" on a real install, which would be the first real download from the model mirror.
 - A true first install opening the welcome page, and the update rebuild of a person's classifier.
@@ -29,19 +31,32 @@ Updated 2026-11-01. Start here.
 
 **Kevin's decision, 2026-11-01:** shared ratings get tested on the droplet with real data **before** the extension goes to any store. This replaces the earlier plan of starting the droplet just before launch. It means paying for the server before there are users, and in exchange the server, voting and verdicts are proven first.
 
-1. **Same-template test (item 17).** Test more flyer pairs, because a collision here changes the hash design. Kevin is collecting images, and they also feed item 1.
-2. **Prove the stack, then the droplet (item 20).** Get the Compose plugin installed with Kevin's OK and start the stack locally. Then follow the going-live checklist in CROWD-API.md.
-3. **Voting in the extension (item 18),** on an unlisted build Kevin loads himself. Update the privacy policy and the Firefox data permission first, and turn on no sharing for anyone before the policy says what's sent.
-4. **Test with real data.** Kevin and a few testers vote on real feeds. Confirm votes arrive, the aggregate job runs, verdicts publish, and the rules in the promises section of CROWD-API.md hold on the live server: no IPs in logs, lone hashes expire. Restore a backup to prove it works, and load-test the votes route.
+1. **Same-template test (item 17).** First pass done: 23 flyers from 4 templates gave no false match from layout, so the hash design stands. Details are in CROWD-API.md. Keep adding flyers to `test-images/flyers/<template>/`, especially human-made ones, because they also feed item 1.
+2. **The droplet (item 20).** The stack is proven locally, so follow the going-live checklist in CROWD-API.md.
+3. **Voting in the extension (item 18),** on an unlisted store build, so it's one click to install and updates itself. See "Installing before launch". Update the privacy policy and the Firefox data permission first, and turn on no sharing for anyone before the policy says what's sent. The policy must also name Cloudflare R2 as where encrypted backups are kept, and say how long: 14 nights on the droplet, 30 days in R2, plus droplet backups.
+4. **Test with real data.** Kevin votes on real feeds from two laptops with different accounts. Confirm votes arrive, the aggregate job runs, verdicts publish, and the rules in the promises section of CROWD-API.md hold on the live server: no IPs in logs, lone hashes expire. Restore a backup to prove it works, and load-test the votes route.
 5. **Verdict downloads (item 19).** Build them against real verdicts, and confirm the extension hides a picture from the list.
 6. **Safari (item 23),** so it launches with the other browsers.
 7. **The launch list below,** then the "Going public" list, then the store listings.
 
 **Open questions for Kevin:**
-- Five voters is a lot with only a few testers. Lower the threshold during testing, or seed verdicts from his hand-sorted pictures? Seeding bypasses the voting rules, so it needs his decision.
-- Who are the testers, and how do they get the unlisted build?
+- Does an unlisted Chrome listing count as "going to a store"? It's reviewed by the store, but nobody can find it without the link. See "Installing before launch".
 - Is the Safari app free, or the paid iPhone idea from earlier? Kevin already has an Apple developer account, so the $99 fee no longer needs covering.
-- Where do backups go off the droplet, and for how long?
+
+**Votes during testing:** the threshold counts installs, not people. Two laptops with Chrome and Firefox, plus a second Chrome profile on one of them, make 5 installs, so it can stay at 5. `CONFIRM_MIN_VOTES` can lower it if that gets tedious, with a warning in the logs, and no verdicts are seeded. This proves the pipeline, not how good the crowd's judgment is.
+
+## Installing before launch
+
+Kevin wants installing to be one click and updates to be automatic, including while testing, because people won't load an unpacked build. Each store has a way to do this without a public listing. Checked against the stores' docs on 2026-11-01; none of it has been tried yet.
+
+| Browser | How | Worth knowing |
+|---|---|---|
+| Chrome | Web Store, **Unlisted** | Anyone with the link installs it, it's out of search, and new versions reach people on their own. It gets the full review, which can take days or weeks for a new developer, so submit early. Check the one-time fee on the sign-up page. |
+| Firefox | **Unlisted** add-on signed by Mozilla | Link to an `.xpi` we host, sent as `application/x-xpinstall`, with `update_url` in the manifest for updates. Signing is automatic, up to 24 hours. |
+| Edge | Add-ons, **Hidden** | Shared by link, and updates keep arriving. Certification can take up to 7 business days. |
+| Safari | **TestFlight** for Mac | Builds expire after 90 days, and external testers need beta review. Apple's docs don't cover a Safari extension specifically, so treat it as likely but unproven. |
+
+A build that sends votes needs the updated privacy policy first, because the stores review what it says.
 
 ## Done
 
@@ -52,15 +67,15 @@ Updated 2026-11-01. Start here.
 - The logo, credited in `brand/README.md`, plus an MIT license and README.
 - The poster redesign of the welcome, Settings and popup pages (1.6).
 - The Firefox memory leak fix (1.5.1), confirmed by Kevin in Firefox and Chrome.
-- Retraining on 205 unique pictures, with less overconfident scores (1.7).
+- Retraining on 205 unique pictures, with less overconfident scores (1.7), then on 224 (1.7.3).
 - The website, privacy policy, model hosting and project email.
 
 ## Before launch: must do
 
 1. **More training examples.** This is the biggest risk to people's first impression.
-   - **Current set:** 87 AI and 118 real unique images, trained in 1.7.0. Mostly from one feed and area. Keep duplicates out: they inflate the numbers, and `test-images/duplicates/` holds the ones moved aside.
+   - **Current set:** 93 AI and 131 real unique images, trained in 1.7.3. Mostly from one feed and area. Keep duplicates out: they inflate the numbers, and `test-images/duplicates/` holds the ones moved aside.
    - **Gaps:** human-made flyers and promo graphics (still the main false positives), AI edits of real photos, realistic AI food, and video frames.
-   - **Target:** 200 or more of each kind.
+   - **Target:** 200 or more of each kind, but human-made flyers come first. In a test on 2026-11-01, 1.7.2 hid 17 of 18 AI flyers it hadn't trained on, and also 3 of 5 human-made ones, so more AI flyers add little.
    - **How:** ratings exported from Settings → `cd eval && node probe.mjs --with <file> --export`, or image files dropped in `test-images/`. Report the new leave-one-out numbers. Early testers can do this with **Save to a file**, which exports only embeddings, because few pictures will reach 3 raters while there are few users.
 2. **Retest in Firefox.** Kevin confirmed 1.5.1 there, but later versions changed the model download and the welcome page. Test with `about:debugging`, then `test/live.html`.
    - **Memory:** the 12 GB leak Kevin saw in Firefox's WebExtensions process was ours, and 1.5.1 fixes it. He confirmed it in real use in Firefox and Chrome on 2026-10-31. It's untested on Firefox versions older than 159, and the extension's minimum is 128.
@@ -92,7 +107,7 @@ The repo's history becomes public along with its files. An audit on 2026-10-31 f
 - **Add `SECURITY.md`,** saying how to report a problem, because a public API needs one.
 - **Say in the README and `eval/README.md`** that the accuracy numbers can't be reproduced from a clone, because `test-images/` stays private.
 - **Decide about the commit email.** Every commit shows Kevin's Gmail, and history also has a Chrome profile name, a mention of his employer and local paths that are now gone from the current files. Rewriting history can replace all of that, and is safe only while he's the sole contributor. Do it once, as the last step before going public, then force-push.
-- **Look again at `vision-examples.json`.** It publishes 512-number summaries of 205 real posts. The extension ships them anyway, but replacing them is worth considering when the training set grows.
+- **Look again at `vision-examples.json`.** It publishes 512-number summaries of 224 real posts. The extension ships them anyway, but replacing them is worth considering when the training set grows.
 - **After going public,** protect `main`, because a push to it deploys, and turn on secret scanning and Dependabot alerts. They're free on public repos.
 
 ## Shared ratings
@@ -100,7 +115,7 @@ The repo's history becomes public along with its files. An audit on 2026-10-31 f
 Design: [CROWD-API.md](CROWD-API.md). Build plan: [plans/2026-10-30-local-api.md](plans/2026-10-30-local-api.md).
 
 16. **The API and its deploy files, running locally.** Fastify, Drizzle and Postgres in `api/`, with the fixed Docker, Caddy and deploy files at the top of the repo. Built and tested locally; not deployed. The compose file and the GitHub workflow haven't run yet.
-17. **Same-template flyer test.** Compare pHashes of flyers from the same template before the extension sends anything. They might collide, and they're already the main false positive. First result: one same-template pair came out 12 bits apart, safely above the 3-bit match limit. Test more pairs before relying on it.
+17. **Same-template flyer test.** Compare pHashes of flyers from the same template before the extension sends anything. They might collide, and they're already the main false positive. Tested on 23 flyers from 4 templates: layout alone never matched, and only the same artwork merged. A small sample, so keep adding to it.
 18. **Voting in the extension.** Off by default, batched, and with the README, privacy policy and Firefox data permissions updated first. The list is in CROWD-API.md.
 19. **Verdict downloads in the extension.** Match locally, then hide with a bar saying the crowd flagged it.
 20. **Put the API on a droplet.** Follow Kevin's checklist in CROWD-API.md. This now comes before the store launch.

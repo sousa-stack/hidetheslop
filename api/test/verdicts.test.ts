@@ -88,6 +88,17 @@ describe('GET /v1/verdicts', () => {
     assert.deepEqual(fresh.remove, []);
   });
 
+  test('raising the threshold again unpublishes through remove', async () => {
+    await seedVotes(db, P, 3);
+    await runAggregate(db, 3);
+    const before = (await get('hashVersion=1')).json();
+    assert.deepEqual(before.add, [P]);
+
+    await runAggregate(db, 5);
+    const later = (await get(`hashVersion=1&since=${before.seq}`)).json();
+    assert.deepEqual(later, { seq: before.seq + 1, add: [], remove: [P], more: false });
+  });
+
   test('a real verdict never appears', async () => {
     await seedVotes(db, P, 5, { label: 'real' });
     await runAggregate(db);

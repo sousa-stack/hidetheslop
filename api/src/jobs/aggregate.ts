@@ -5,6 +5,7 @@ import {
   CONFIRM_MIN_VOTES,
   HID_WEIGHT,
   LONE_HASH_DAYS,
+  LONE_HASH_MIN_VOTES,
   MERGE_MAX_BITS,
 } from '../config.js';
 import type { Db, Tx } from '../db/client.js';
@@ -44,7 +45,7 @@ export async function mergeNearDuplicates(db: Queryable): Promise<void> {
 // committed after the merge step waits for the next run instead of getting a verdict
 // before it had the chance to join a root. `published` takes a new seq only when it
 // changes, or on a new row that's published, so clients fetch just what changed.
-export async function updateVerdicts(db: Queryable): Promise<void> {
+export async function updateVerdicts(db: Queryable, minVotes = CONFIRM_MIN_VOTES): Promise<void> {
   await db.execute(sql`
     with counted as (
       select r.id as hash_id,
@@ -62,7 +63,7 @@ export async function updateVerdicts(db: Queryable): Promise<void> {
     labelled as (
       select c.*,
              case
-               when c.vote_count < ${CONFIRM_MIN_VOTES}::integer then null
+               when c.vote_count < ${minVotes}::integer then null
                when c.ai_weight / (c.ai_weight + c.real_weight) >= ${CONFIRM_MIN_SHARE}::double precision
                  then 'ai'::vote_label
                when c.real_weight / (c.ai_weight + c.real_weight) >= ${CONFIRM_MIN_SHARE}::double precision
@@ -73,7 +74,7 @@ export async function updateVerdicts(db: Queryable): Promise<void> {
     judged as (
       select l.*,
              case
-               when l.vote_count < ${CONFIRM_MIN_VOTES}::integer then 'pending'::verdict_status
+               when l.vote_count < ${minVotes}::integer then 'pending'::verdict_status
                when l.label is not null then 'confirmed'::verdict_status
                else 'disputed'::verdict_status
              end as status,
@@ -113,8 +114,14 @@ export async function expireLoneHashes(db: Queryable): Promise<void> {
         select count(*) from votes v
         join hashes member on member.id = v.hash_id
         where member.id = r.id or member.canonical_id = r.id
-      ) < ${CONFIRM_MIN_VOTES}::integer
+      ) < ${LONE_HASH_MIN_VOTES}::integer
   `);
+}
+
+// A lowered threshold publishes verdicts on fewer votes than the docs promise, so it
+// shouldn't be able to stay on unnoticed.
+export function warnAboutThreshold(log: { warn(message: string): void }, minVotes: number): void {
+  if (minVotes !== CONFIRM_MIN_VOTES) log.warn(`CONFIRM_MIN_VOTES is ${minVotes}, not ${CONFIRM_MIN_VOTES}`);
 }
 
 // Runs the job on its interval, and once soon after startup. The interval starts over
@@ -132,14 +139,14 @@ export function scheduleAggregate(run: () => void, intervalMinutes: number): () 
 }
 
 // Returns false when another run holds the lock.
-export async function runAggregate(db: Db): Promise<boolean> {
+export async function runAggregate(db: Db, minVotes = CONFIRM_MIN_VOTES): Promise<boolean> {
   return db.transaction(async (tx) => {
     const [row] = await tx.execute<{ locked: boolean }>(
       sql`select pg_try_advisory_xact_lock(${AGGREGATE_LOCK_KEY}::bigint) as locked`,
     );
     if (!row?.locked) return false;
     await mergeNearDuplicates(tx);
-    await updateVerdicts(tx);
+    await updateVerdicts(tx, minVotes);
     await expireLoneHashes(tx);
     return true;
   });

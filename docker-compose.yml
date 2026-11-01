@@ -31,6 +31,7 @@ services:
       NODE_ENV: production
       PORT: 3000
       DATABASE_URL: postgres://${POSTGRES_USER:?set POSTGRES_USER in .env}:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@db:5432/${POSTGRES_DB:?set POSTGRES_DB in .env}
+      CONFIRM_MIN_VOTES: ${CONFIRM_MIN_VOTES:-5}
     # No host port. Only Caddy can reach it.
     expose: ["3000"]
     depends_on:
@@ -72,6 +73,10 @@ services:
   uptime:
     image: louislam/uptime-kuma:2
     restart: unless-stopped
+    environment:
+      # Without this, a new install opens a public page where the first visitor picks the
+      # database, before there's an admin to protect it.
+      UPTIME_KUMA_DB_TYPE: sqlite
     volumes:
       - kuma_data:/app/data
     expose: ["3001"]

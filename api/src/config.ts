@@ -1,10 +1,14 @@
 // Starting points. They'll need tuning once real votes arrive.
 
+// The default for the CONFIRM_MIN_VOTES setting, which stays 5 outside testing.
 export const CONFIRM_MIN_VOTES = 5;
 export const CONFIRM_MIN_SHARE = 0.8;
 export const EMBEDDING_MIN_VOTES = 3;
 export const MERGE_MAX_BITS = 3;
 export const LONE_HASH_DAYS = 90;
+// Fixed, not tied to CONFIRM_MIN_VOTES. "Fewer than 5 votes is deleted after 90 days" is a
+// public promise, and a test setting mustn't move it.
+export const LONE_HASH_MIN_VOTES = 5;
 // "Hide slop" may only mean you don't like the post, so it counts for less than a rating.
 export const HID_WEIGHT = 0.5;
 export const CURRENT_MODEL_VERSION = 1;

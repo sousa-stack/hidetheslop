@@ -19,14 +19,14 @@ The example pictures are in `../test-images/ai` and `../test-images/real`. They'
 | `sheet.mjs out.jpg <dir> <prefix>…` | A labelled thumbnail grid of chosen images, for eyeballing mistakes. |
 | `compare.mjs` | The original comparison of three ready-made detectors, kept as a record. Their models were deleted; the comment at the top says how to get them back. |
 
-## What we found (November 2026, 205 unique images: 87 AI, 118 real)
+## What we found (November 2026, 224 unique images: 93 AI, 131 real)
 
 Each image was scored by a classifier that hadn't seen it, at a 70% cutoff. Duplicates were removed first, because a copy of the test picture in the training set inflates the score. The training settings were tuned on these same images, so treat these numbers as slightly optimistic.
 
 | Approach | AI caught | Real wrongly flagged |
 |---|---|---|
-| **CLIP ViT-B/32 + logistic regression on our examples** (shipped) | **78 / 87** | **6 / 118** |
-| CLIP ViT-L/14 + the same | 80 / 87 | 4 / 118 (and about 13× slower) |
+| **CLIP ViT-B/32 + logistic regression on our examples** (shipped) | **83 / 93** | **8 / 131** |
+| CLIP ViT-L/14 + the same | 81 / 93 | 6 / 131 (and about 13× slower) |
 | SigLIP AI-vs-human detector (Ateeqq) | 24 / 24 | 14 / 30 (flags nearly every flyer) |
 | SwinV2 detector (haywoodsloan) | 12 / 24 | 4 / 30 (misses most AI flyers) |
 | ViT detector (prithivMLmods) | scores everything about 80% | n/a |

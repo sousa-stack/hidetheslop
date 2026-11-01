@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { CONFIRM_MIN_VOTES } from './config.js';
 
 const schema = z.object({
   DATABASE_URL: z.string().min(1),
@@ -7,6 +8,8 @@ const schema = z.object({
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   // Past about 35,791 minutes, setInterval overflows and fires straight away, on a loop.
   AGGREGATE_INTERVAL_MINUTES: z.coerce.number().int().min(0).max(35000).default(60),
+  // Lowered only to test with a few people. One vote must never be able to confirm a picture.
+  CONFIRM_MIN_VOTES: z.coerce.number().int().min(2).max(100).default(CONFIRM_MIN_VOTES),
 });
 
 export type Env = z.infer<typeof schema>;

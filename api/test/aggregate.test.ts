@@ -3,7 +3,12 @@ import { after, beforeEach, describe, test } from 'node:test';
 import { eq, sql } from 'drizzle-orm';
 import postgres from 'postgres';
 import { hashes, verdicts, votes } from '../src/db/schema.js';
-import { AGGREGATE_LOCK_KEY, runAggregate, updateVerdicts } from '../src/jobs/aggregate.js';
+import {
+  AGGREGATE_LOCK_KEY,
+  runAggregate,
+  updateVerdicts,
+  warnAboutThreshold,
+} from '../src/jobs/aggregate.js';
 import { hexToSigned } from '../src/lib/phash.js';
 import { addHash, flip, openTestDb, reset, seedVotes, testDatabaseUrl } from './helpers.js';
 
@@ -147,6 +152,44 @@ describe('verdicts', () => {
   });
 });
 
+describe('the vote threshold', () => {
+  test('a lower threshold confirms and publishes', async () => {
+    await seedVotes(db, A, 2);
+    await runAggregate(db, 3);
+    assert.equal((await verdictOf(A))?.status, 'pending');
+
+    await seedVotes(db, A, 1);
+    await runAggregate(db, 3);
+    const v = await verdictOf(A);
+    assert.equal(v?.status, 'confirmed');
+    assert.equal(v?.published, true);
+    assert.equal(v?.seq, 1);
+  });
+
+  test('a higher threshold holds back what 5 would confirm', async () => {
+    await seedVotes(db, A, 5);
+    await runAggregate(db, 6);
+    assert.equal((await verdictOf(A))?.status, 'pending');
+  });
+
+  test('leaving it out means 5', async () => {
+    await seedVotes(db, A, 4);
+    await seedVotes(db, B, 5);
+    await runAggregate(db);
+    assert.equal((await verdictOf(A))?.status, 'pending');
+    assert.equal((await verdictOf(B))?.status, 'confirmed');
+  });
+
+  test('warns once when it is not 5, and not at all when it is', () => {
+    const messages: string[] = [];
+    const log = { warn: (message: string) => void messages.push(message) };
+    warnAboutThreshold(log, 5);
+    assert.deepEqual(messages, []);
+    warnAboutThreshold(log, 3);
+    assert.deepEqual(messages, ['CONFIRM_MIN_VOTES is 3, not 5']);
+  });
+});
+
 describe('merging near-duplicates', () => {
   test('merges within 3 bits, and counts votes across the picture', async () => {
     const near = flip(A, 3);
@@ -247,6 +290,18 @@ describe('the run itself', () => {
 });
 
 describe('expiry', () => {
+  test('stays at 5 votes when the threshold is lowered or raised', async () => {
+    await seedVotes(db, A, 4, { ageDays: 91 });
+    await seedVotes(db, B, 6, { ageDays: 91 });
+    await runAggregate(db, 2); // A is confirmed here, and still has fewer than the promised 5
+    assert.equal(await verdictOf(A), undefined);
+    assert.ok(await verdictOf(B));
+
+    await seedVotes(db, C, 5, { ageDays: 91 });
+    await runAggregate(db, 100); // C is pending here, and still has the promised 5
+    assert.ok(await verdictOf(C));
+  });
+
   test('a lone hash expires at 91 days and not at 89', async () => {
     await seedVotes(db, A, 2, { ageDays: 91 });
     await seedVotes(db, B, 2, { ageDays: 89 });
