@@ -78,7 +78,7 @@ This runs the real `background.js` and `vision.js` with the real model and stubb
 
 ## Settings page: `extension/test/options-preview.html`
 
-This shows the real `options.html` with faked APIs and sample data, and always loads fresh CSS and JS. Add `?empty` to see a fresh install. Use it for any design work. Kevin reviews design changes there in the in-app browser pane. Check both light and dark mode.
+This shows the real `options.html` with faked APIs and sample data, and always loads fresh CSS and JS. Add `?empty` to see a fresh install. Add `?page=welcome` or `?page=popup` for those pages. For the popup, `&unreached` shows a tab that needs a reload and `&blocked` shows a browser page. The model download is always faked here, and adding `&empty&fail` makes it fail. Use it for any design work, and check phone width with both pages. Hovering in a hidden in-app browser pane is unreliable, so check the welcome page's hover demo with the pane showing. Kevin reviews design changes there in the in-app browser pane. These pages ignore dark mode on purpose.
 
 ## The installed extension in Kevin's real Chrome
 

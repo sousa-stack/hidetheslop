@@ -1,0 +1,68 @@
+/* The look shared by the welcome and Settings pages: a printed poster, with one fixed
+   palette, so it doesn't follow the browser's dark mode. The display type uses condensed
+   fonts people already have, because loading one from the web would break the promise
+   that nothing is fetched. */
+:root {
+  --ink: #2b2d31;
+  --paper: #edece8;
+  --amber: #fdae17;
+  --red: #c80000;
+  --rule: rgba(43, 45, 49, .85);
+  --muted: #5a5a56;
+  --display: "DIN Condensed", Bahnschrift, "Arial Narrow", Impact, "Roboto Condensed", sans-serif;
+  /* DIN Condensed's capitals sit high in their line box. This moves them to its middle. */
+  --cap-nudge: .14em;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--ink); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, sans-serif; }
+button { font: inherit; cursor: pointer; }
+button:disabled { cursor: default; opacity: .55; }
+button.link { all: unset; color: var(--red); cursor: pointer; font-weight: 600; text-decoration: underline; }
+button.link:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+button.primary { background: var(--red); border: 0; border-radius: 4px; color: #fff; font-weight: 700; letter-spacing: .02em; padding: 12px 24px; }
+button.primary:hover:not(:disabled) { background: #a80000; }
+button.primary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+.sheet { max-width: 880px; margin: 40px auto; background: var(--paper); }
+
+/* The amber plate. Two tiled dot layers make the printed speckle. */
+.plate {
+  padding: 24px 40px 38px;
+  background:
+    radial-gradient(circle, rgba(150, 90, 0, .28) 1px, transparent 1.4px) 0 0 / 23px 19px,
+    radial-gradient(circle, rgba(150, 90, 0, .2) .8px, transparent 1.2px) 7px 11px / 37px 31px,
+    var(--amber);
+}
+h1 { margin: 0; font: 700 clamp(46px, 12.4vw, 112px)/.95 var(--display); font-stretch: condensed; letter-spacing: .01em; text-transform: uppercase; transform: translateY(var(--cap-nudge)); }
+
+.notice { margin: 0; padding: 18px 40px; background: var(--ink); color: var(--paper); }
+.notice p { margin: 0 0 10px; }
+.notice button { background: var(--paper); border: 0; border-radius: 4px; color: var(--ink); font-weight: 600; padding: 8px 14px; }
+
+/* Each row: one big word, then the small print beside it, split by a thin rule. */
+.line { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 24px; margin: 0 40px; padding: 22px 0 20px; border-top: 2px solid var(--rule); }
+.plate + .line, .notice + .line { border-top: 0; }
+/* --text-cap-top is how far down the text beside the word starts, so their tops line up. */
+.line h2 { margin: calc(var(--text-cap-top, 0px) + .045em) 0 0; font: 700 clamp(60px, 9vw, 84px)/.9 var(--display); font-stretch: condensed; letter-spacing: .01em; text-transform: uppercase; }
+
+/* On/off switches. Drawn with a gradient rather than ::before, which Firefox doesn't
+   render on inputs. */
+.switch-input {
+  appearance: none; -webkit-appearance: none; flex: none; margin: 0; width: 50px; height: 30px; border-radius: 30px; cursor: pointer;
+  background: radial-gradient(circle, #fff 0 10.5px, transparent 11.5px) no-repeat 0 0 / 30px 30px, #8d8c88;
+  transition: background-position .15s, background-color .15s;
+}
+.switch-input:checked { background-color: var(--red); background-position: 20px 0; }
+.switch-input:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.switch-input:disabled { cursor: default; opacity: .5; }
+
+@media (max-width: 720px) {
+  .sheet { margin: 0; }
+  .plate { padding: 26px 18px 28px; }
+  .notice { padding: 16px 18px; }
+  .line { grid-template-columns: 1fr; gap: 8px; margin: 0 18px; }
+  .line h2 { margin-top: 0; }
+}

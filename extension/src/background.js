@@ -253,9 +253,14 @@ api.contextMenus.onClicked.addListener((info, tab) => {
     .catch(() => {});
 });
 
-api.runtime.onInstalled.addListener(async () => {
+api.runtime.onInstalled.addListener(async ({ reason }) => {
   createMenus();
   api.action.setBadgeBackgroundColor({ color: '#c80000' }).catch(() => {});
+  // The welcome page also asks for site access if Firefox didn't get it at install.
+  if (reason === 'install') {
+    api.tabs.create({ url: api.runtime.getURL('welcome.html') }).catch(() => {});
+    return;
+  }
   // Firefox lets people install without granting site access; nothing works until they do.
   const granted = await api.permissions.contains({ origins: SLOP_ORIGINS }).catch(() => true);
   if (!granted) api.runtime.openOptionsPage();

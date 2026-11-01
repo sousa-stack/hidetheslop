@@ -1,0 +1,110 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Welcome to Hide the Slop</title>
+  <link rel="stylesheet" href="poster.css">
+  <link rel="stylesheet" href="welcome.css">
+</head>
+<body>
+  <main class="sheet">
+    <header class="plate">
+      <h1>Hide the Slop is on</h1>
+      <div class="specimen">
+        <ul class="notes left">
+          <li>Reads AI labels!</li>
+          <li>Catches AI hashtags!</li>
+        </ul>
+        <img src="icons/logo-480.png" alt="" width="240" height="240">
+        <ul class="notes right">
+          <li>Finds hidden AI notes!</li>
+          <li class="pending">Pictures: your call</li>
+        </ul>
+      </div>
+    </header>
+
+    <div id="perm" class="notice" hidden>
+      <p><strong>Hide the Slop can't see any pages yet.</strong> Firefox asks you to allow site access separately.</p>
+      <button id="grant">Allow on all sites</button>
+    </div>
+
+    <section class="line feature">
+      <h2>Pictures</h2>
+      <div class="copy">
+        <p class="rule off" id="pictureRule">Show AI pictures nobody labeled</p>
+        <p class="lead">Most AI pictures have no label, so use your own robot to hide the clankers. It's a small AI that runs on your computer and guesses which pictures are AI-made. It only looks: it never makes anything, and nothing is uploaded.</p>
+        <p>Your robot is a one-time 89 MB download from Hugging Face. It makes mistakes, so everything it hides keeps a Show button, and you can teach it what it got wrong.</p>
+        <div id="offer" class="choices">
+          <button id="turnOn" class="primary">Turn it on</button>
+          <button id="later" class="link">Not now</button>
+        </div>
+        <p id="status" class="result" aria-live="polite"></p>
+      </div>
+    </section>
+
+    <section class="line">
+      <h2>Labels</h2>
+      <div class="copy">
+        <label class="toggle">
+          <span class="rule" data-on="Hide posts marked as AI" data-off="Show posts marked as AI"></span>
+          <input type="checkbox" class="switch-input" role="switch" data-key="labels">
+        </label>
+        <p>Like the "AI content" and "AI info" labels on Facebook, Instagram, TikTok, YouTube and more.</p>
+      </div>
+    </section>
+
+    <section class="line">
+      <h2>Hashtags</h2>
+      <div class="copy">
+        <label class="toggle">
+          <span class="rule" data-on="Hide posts with these tags:" data-off="Show posts with these tags:"></span>
+          <input type="checkbox" class="switch-input" role="switch" data-key="hashtags">
+        </label>
+        <p>#aiart, #midjourney, "made with ChatGPT" and others like them.</p>
+      </div>
+    </section>
+
+    <section class="line">
+      <h2>Files</h2>
+      <div class="copy">
+        <label class="toggle">
+          <span class="rule" data-on="Hide pictures with an AI note in the file" data-off="Show pictures with an AI note in the file"></span>
+          <input type="checkbox" class="switch-input" role="switch" data-key="scanImages">
+        </label>
+        <p>AI tools often leave a hidden note inside the pictures they make. This works on every site, though Facebook and Instagram remove those notes.</p>
+      </div>
+    </section>
+
+    <section class="line">
+      <h2>You</h2>
+      <div class="copy">
+        <p class="rule">Hide anything you want</p>
+        <p>Rest your mouse on a big picture and a button appears in its corner. Try it here.</p>
+        <div id="demo" class="demo">
+          <div class="demo-post">
+            <button id="demoHide" class="chip" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" aria-hidden="true"><circle cx="12" cy="12" r="9.5"/><path d="M5.5 18.5l13-13"/></svg>
+              Hide slop
+            </button>
+            <span>Rest your mouse here</span>
+          </div>
+          <div class="demo-bar" hidden>
+            <b>Hide the Slop</b><span>you hid this</span><button id="demoShow" type="button">Show</button>
+          </div>
+        </div>
+        <p>On a real page this keeps that picture hidden, and teaches your robot if it's on. Right-click → <i>Hide this as AI slop</i> does the same thing.</p>
+      </div>
+    </section>
+
+    <footer class="after">
+      <p><b>Reload any tabs you already had open,</b> so it can start working on them.</p>
+      <p><button id="settings" class="link">Open Settings</button> to choose what gets hidden, or block accounts and words.</p>
+    </footer>
+  </main>
+
+  <script src="common.js"></script>
+  <script src="vision.js"></script>
+  <script src="welcome.js"></script>
+</body>
+</html>

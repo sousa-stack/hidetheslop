@@ -14,7 +14,8 @@
 | `ort/` | with `vision.js` | onnxruntime-web 1.31.1 (MIT), WebAssembly build |
 | `popup.*` | toolbar popup | count hidden on this page, show all, pause on this site |
 | `options.*` | settings page | every setting, model download, ratings |
-| `ui.css` | popup and options | shared styles and colors |
+| `welcome.*` | welcome page | opens once, on first install: picture check offer, site access, a demo of the Hide slop button |
+| `poster.css` | popup, options and welcome pages | the shared poster look; `popup.css`, `options.css` and `welcome.css` add each page's own styles |
 | `vision-weights.json` | background | the shipped classifier (written by `eval/probe.mjs --export`) |
 | `vision-examples.json` | background | the shipped training embeddings, for retraining with your ratings |
 

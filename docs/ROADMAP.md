@@ -30,7 +30,7 @@ Hide the Slop stays free and open source, on every platform we can reach. It sho
    - **Clean up:** `test-images/` has one near-identical pair with the same label, which slightly flatters the leave-one-out score.
 2. **Retest in Firefox.** Kevin last used it in Firefox around version 1.1. Since then 1.2–1.5 changed the background page (the model, ratings, one download). Test with `about:debugging`, then `test/live.html`.
    - **Memory:** the 12 GB leak Kevin saw in Firefox's WebExtensions process was ours, and 1.5.1 fixes it. He confirmed it in real use in Firefox and Chrome on 2026-10-31. It's untested on Firefox versions older than 159, and the extension's minimum is 128.
-3. **Host the model ourselves.** Put a copy on hidetheslop.com, checked by the same SHA-256 hash, and fall back to Hugging Face. Right now one Hugging Face account going away breaks the picture check.
+3. **Host the model ourselves.** Put a copy on Cloudflare R2 at a hidetheslop.com address, checked by the same SHA-256 hash, and fall back to Hugging Face. Right now one Hugging Face account going away breaks the picture check. Don't serve it from the droplet, and Cloudflare Pages can't hold it. The numbers are in CROWD-API.md under "If it takes off".
 4. **Privacy policy page.** Both stores require one, because the extension reads every site. The truth is simple:
    - Pictures are re-downloaded from where the page got them, without cookies.
    - The model comes from Hugging Face (or our mirror).
@@ -39,8 +39,8 @@ Hide the Slop stays free and open source, on every platform we can reach. It sho
 
 ## Before launch: should do
 
-5. **Welcome page on install.** Explain the three ways it hides slop, and offer to turn on the picture check, which is off by default and an 89 MB download. Show the hover button.
-6. **Popup redesign** to match Settings: red, larger text, picture-check status, and a "report a broken site" link.
+5. **Welcome page on install.** Done in 1.6.0. It still needs a check that it opens on a real first install in Chrome and Firefox. When shared ratings ship, add them here as an opt-in.
+6. **Popup redesign.** Done in 1.6.0. Still to add: a "report a broken site" link, once the repo is public and has an issues page.
 7. **Replace `window.prompt`** in "Always hide posts from this account…" with an in-page dialog styled like the rest.
 8. **Hover button on unknown layouts:** it hides only the picture when it can't find the post around it.
 9. **Untested on real Facebook:**
@@ -85,7 +85,7 @@ One static page on Cloudflare Pages or GitHub Pages, with no tracking scripts or
 - how it works
 - honest accuracy numbers
 - the privacy promise
-- an FAQ
+- an FAQ, which should say plainly that the picture check is AI: "robots catching robots". It should cover what the model does and how it differs from the tools making slop, because that audience will ask. It runs on your computer and only looks at pictures. CLIP itself was trained on a large set of web images by OpenAI; our small classifier on top was trained on hand-sorted examples.
 - links to GitHub and donations
 - the privacy policy, and the model mirror from item 3
 

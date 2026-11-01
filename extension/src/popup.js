@@ -1,6 +1,9 @@
 const api = SLOP_API;
 const $ = (id) => document.getElementById(id);
 
+const RELOADABLE = /^https?:/;
+const NEVER_RUNS = /^https:\/\/(addons\.mozilla\.org|chromewebstore\.google\.com|chrome\.google\.com\/webstore|microsoftedge\.microsoft\.com\/addons)/;
+
 (async () => {
   const settings = await slopGetSettings();
   const [tab] = await api.tabs.query({ active: true, currentWindow: true });
@@ -8,6 +11,7 @@ const $ = (id) => document.getElementById(id);
   $('enabled').checked = settings.enabled;
   $('enabled').addEventListener('change', () => api.storage.sync.set({ enabled: $('enabled').checked }));
   $('options').addEventListener('click', () => api.runtime.openOptionsPage());
+  $('robot').textContent = settings.visualCheck ? 'Your robot is on' : 'Your robot is off';
 
   const stats = await api.runtime.sendMessage({ type: 'tabStats', tabId: tab.id }).catch(() => null);
   if (stats) {
@@ -27,9 +31,20 @@ const $ = (id) => document.getElementById(id);
 
   const where = await api.tabs.sendMessage(tab.id, { type: 'whereAmI' }, { frameId: 0 }).catch(() => null);
   if (!where) {
-    $('pause').disabled = true;
-    $('pause').textContent = 'Not running on this page';
     $('reveal').disabled = true;
+    // A tab opened before the extension loaded just needs a reload. Browser pages and
+    // extension stores never let it in, so don't offer something that can't work.
+    if (RELOADABLE.test(tab.url || '') && !NEVER_RUNS.test(tab.url)) {
+      $('pause').textContent = 'Reload this page to start';
+      $('pause').classList.add('primary');
+      $('pause').addEventListener('click', () => {
+        api.tabs.reload(tab.id);
+        window.close();
+      });
+    } else {
+      $('pause').disabled = true;
+      $('pause').textContent = "Can't run on this page";
+    }
     return;
   }
   const paused = settings.disabledSites.includes(where.host);

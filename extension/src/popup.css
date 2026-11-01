@@ -1,0 +1,29 @@
+/* The toolbar popup. The shared look is in poster.css. */
+body { width: 300px; background: var(--paper); font-size: 14px; }
+
+.plate { display: flex; align-items: center; gap: 10px; padding: 10px 14px; }
+.plate img { flex: none; width: 40px; height: 40px; }
+h1 { flex: 1; min-width: 0; font-size: 30px; white-space: nowrap; }
+
+main { padding: 12px 14px 14px; }
+
+.tally { display: flex; align-items: center; gap: 12px; }
+.tally strong { font: 700 68px/.9 var(--display); font-stretch: condensed; transform: translateY(var(--cap-nudge)); }
+.tally span { font-size: 15px; font-weight: 600; line-height: 1.25; }
+
+#reasons { list-style: none; margin: 8px 0 0; padding: 0; max-height: 132px; overflow: auto; color: var(--muted); font-size: 13px; }
+#reasons:empty { display: none; }
+#reasons li { padding: 4px 0; border-top: 1px solid var(--rule); }
+
+.robot { margin: 10px 0 0; padding-top: 8px; border-top: 2px solid var(--rule); font-size: 13px; font-style: italic; letter-spacing: .06em; text-transform: uppercase; }
+.robot:empty { display: none; }
+
+.actions { display: grid; gap: 8px; margin-top: 12px; }
+.actions button { padding: 9px 12px; border: 2px solid var(--ink); border-radius: 4px; background: transparent; color: var(--ink); font-weight: 600; }
+.actions button:hover:not(:disabled) { background: var(--ink); color: var(--paper); }
+.actions button:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+.actions button.primary { border-color: var(--red); background: var(--red); color: #fff; }
+.actions button.primary:hover:not(:disabled) { border-color: #a80000; background: #a80000; color: #fff; }
+.actions button:disabled { border-color: #8d8c88; color: var(--muted); opacity: 1; }
+
+#options { display: inline-block; margin-top: 12px; }

@@ -97,12 +97,24 @@ Errors are `{error: <short code>}` and never repeat the input. A batch with two 
 
 - Add the hash to `SlopVision.inspect()`, so it comes from the same single download.
 - Add `shareRatings` to `SLOP_DEFAULTS`, off by default, with a control in `options.html`. Explain it in plain words where it's turned on.
-- Queue votes in `storage.local` and send them in batches from the background, so the timing doesn't follow your browsing.
+- Queue votes in `storage.local` and send them in batches from the background, so the timing doesn't follow your browsing. If the server is down or busy, fail quietly and retry later. It must never affect hiding.
 - `learn()` knows the rating; `showAndAsk` is `source: 'rated'`, and the **Hide slop** button and right-click are `source: 'hid'`.
 - Never send the rating's `key`, which contains the image URL. Skip `data:` video frames, because the hash changes with the frame.
 - Firefox: change `data_collection_permissions` to declare the optional collection, probably `websiteContent`, and request it at runtime. Check Mozilla's docs and the policy dated December 1, 2026 first.
 - Update the README's privacy section, the privacy policy and the store listings in the same release.
 - Only people with the picture check on can rate today, because `learn()` needs the embedding. Verdicts for people without the model would mean downloading Facebook pictures again, which 1.5 stopped doing, so that comes later.
+
+## If it takes off
+
+The extension does its work on people's own computers, so more users barely touch the server. Only three things travel over the network, and each is sized for a surge:
+
+- **The model (89 MB, once per person who turns on the picture check).** Never serve it from the droplet. 1,000 downloads a day is about 2.7 TB a month, which on a droplet costs about $17–21 a month and competes with the API for bandwidth. On Cloudflare R2 the same traffic should be free: no egress fees, and 30,000 reads is well inside the 10 million free each month. Confirm custom-domain egress is covered when setting it up. Today the file comes from Hugging Face, which publishes no bandwidth cap for it, and its limit of 3,000 requests per IP every 5 minutes is far above this use.
+- **The verdict list.** Cloudflare caches it, so a surge in users mostly doesn't reach the droplet. This depends on the Cache Rule in the going-live checklist.
+- **Votes.** Only explicit ratings, in small batches, and rate limited per IP. This is the one thing that does reach the droplet, and it's tiny.
+
+**If the droplet falls over, hiding keeps working.** Picture checks and every other detector run locally, so people only lose new votes and list updates. The extension must fail quietly and retry later. Droplet overage is $0.01 per GiB, so a traffic spike can't produce a shocking bill.
+
+Prices checked on 2026-11-01: [R2](https://developers.cloudflare.com/r2/pricing/), [Droplets](https://docs.digitalocean.com/products/droplets/details/pricing/), [Hugging Face limits](https://huggingface.co/docs/hub/rate-limits), [Pages](https://developers.cloudflare.com/pages/platform/limits/).
 
 ## Paying for it
 

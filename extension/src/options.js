@@ -20,9 +20,18 @@ async function checkPermission() {
   const s = await slopGetSettings();
   $('version').textContent = `v${api.runtime.getManifest().version}`;
 
+  // Switches with data-on/data-off say what they do right now: Hide when on, Show when off.
+  function showWording(box) {
+    if (!box.dataset.on) return;
+    box.closest('label').querySelector('b').textContent = box.checked ? box.dataset.on : box.dataset.off;
+  }
   for (const box of document.querySelectorAll('input[type=checkbox][data-key]')) {
     box.checked = !!s[box.dataset.key];
-    box.addEventListener('change', () => save({ [box.dataset.key]: box.checked }));
+    showWording(box);
+    box.addEventListener('change', () => {
+      showWording(box);
+      save({ [box.dataset.key]: box.checked });
+    });
   }
   for (const radio of document.querySelectorAll('input[name=mode]')) {
     radio.checked = radio.value === s.mode;
@@ -39,7 +48,9 @@ async function checkPermission() {
     if (vbox.checked && !have) status('The model is missing. Turn this off and on again to download it.');
   }
   vbox.checked = s.visualCheck;
+  showWording(vbox);
   vbox.addEventListener('change', async () => {
+    showWording(vbox);
     if (!vbox.checked) {
       status('');
       return save({ visualCheck: false });
@@ -51,6 +62,7 @@ async function checkPermission() {
       await save({ visualCheck: true });
     } catch (e) {
       vbox.checked = false;
+      showWording(vbox);
       status(`Couldn't download the model: ${e.message}`);
     }
     vbox.disabled = false;
@@ -59,6 +71,7 @@ async function checkPermission() {
   $('deleteModel').addEventListener('click', async () => {
     await SlopVision.remove();
     vbox.checked = false;
+    showWording(vbox);
     await save({ visualCheck: false });
     showModelState();
   });

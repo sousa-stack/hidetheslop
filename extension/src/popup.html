@@ -2,25 +2,30 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <link rel="stylesheet" href="ui.css">
+  <link rel="stylesheet" href="poster.css">
+  <link rel="stylesheet" href="popup.css">
 </head>
-<body class="popup">
-  <header>
-    <img src="icons/icon-32.png" alt="" width="20" height="20">
+<body>
+  <header class="plate">
+    <img src="icons/logo-480.png" alt="" width="40" height="40">
     <h1>Hide the Slop</h1>
-    <label class="switch"><input type="checkbox" id="enabled"><span></span></label>
+    <input type="checkbox" class="switch-input" id="enabled" role="switch" aria-label="Hide the Slop on or off">
   </header>
 
-  <section>
-    <div class="count"><strong id="count">0</strong> <span id="count-label">hidden on this page</span></div>
+  <main>
+    <section class="tally">
+      <strong id="count">0</strong>
+      <span id="count-label">things hidden on this page</span>
+    </section>
     <ul id="reasons"></ul>
-  </section>
+    <p id="robot" class="robot"></p>
 
-  <section class="actions">
-    <button id="reveal">Show everything hidden here</button>
-    <button id="pause">Pause on this site</button>
+    <section class="actions">
+      <button id="reveal">Show everything hidden here</button>
+      <button id="pause">Pause on this site</button>
+    </section>
     <button id="options" class="link">Settings</button>
-  </section>
+  </main>
 
   <script src="common.js"></script>
   <script src="popup.js"></script>
