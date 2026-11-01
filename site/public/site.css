@@ -13,14 +13,17 @@ h1 { text-align: center; }
 .copy p { margin: 10px 0 0; }
 .copy .rule { margin: 0 0 8px; font-size: 21px; font-weight: 700; line-height: 1.25; }
 .copy .rule.next { margin-top: 18px; }
-.choices { margin-top: 16px; }
+
+/* The button stays in reach while you look at the feed. On desktop it rides along with
+   the big word. On a phone it sits at the bottom of the screen until the section ends. */
+.try .side { position: sticky; top: 20px; align-self: start; }
+.try .choices { margin-top: 16px; }
+.post { scroll-margin-top: 16px; }
 
 .feed { display: grid; gap: 10px; margin-top: 14px; }
 .post > div:not(.bar) { display: grid; place-items: center; align-content: center; gap: 2px; min-height: 104px; padding: 12px; border: 2px solid var(--ink); text-align: center; }
 .post b { font-size: 18px; }
 .post span { font-size: 14px; }
-.flyer { background: linear-gradient(120deg, #f59e0b, #dc2626 60%, #7c3aed); color: #fff; }
-.flyer.two { background: linear-gradient(120deg, #06b6d4, #7c3aed 60%, #db2777); }
 .post > div.photo { padding: 0; gap: 0; background: #fff; }
 .photo img { display: block; width: 100%; height: auto; }
 .photo p { display: grid; gap: 2px; margin: 0; padding: 10px 12px; }
@@ -54,6 +57,11 @@ h1 { text-align: center; }
 
 @media (max-width: 720px) {
   .mark { width: 180px; height: 180px; }
+  .line.try { display: flex; flex-direction: column; }
+  .try .side { display: contents; }
+  .try .copy { order: 1; }
+  .try .choices { order: 2; position: sticky; bottom: 12px; margin-top: 12px; }
+  .try .choices button { width: 100%; box-shadow: 0 2px 10px rgba(0, 0, 0, .35); }
   .plate.short { padding: 18px; gap: 14px; }
   .plate.short img { width: 64px; height: 64px; }
   .policy { padding: 22px 18px 12px; }

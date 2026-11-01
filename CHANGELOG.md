@@ -5,6 +5,10 @@ Nothing changes for people using the extension yet.
 - `api/`: a server for pooling ratings without personal data or browsing history. The extension doesn't call it yet. See `docs/CROWD-API.md`.
 - Docker, Caddy, deploy and hardening files for one droplet behind Cloudflare, none of it live yet.
 
+## 1.7.2
+- The model downloads from a copy on Cloudflare, falling back to Hugging Face. Both are checked by the same hash, so the picture check no longer depends on one Hugging Face account.
+- A privacy policy link on the welcome and Settings pages.
+
 ## 1.7.1
 - Flat amber headers on the welcome, Settings and popup pages, without the dotted background.
 - A simpler welcome page header: the logo and one line, instead of four callouts.

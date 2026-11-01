@@ -23,28 +23,36 @@
       </div>
     </header>
 
-    <section class="line">
-      <h2>Try it</h2>
+    <section class="line try">
+      <div class="side">
+        <h2>Try it</h2>
+        <div class="choices"><button id="toggle" class="primary">Hide the slop</button></div>
+      </div>
       <div class="copy">
         <p class="rule">See your feed without the slop</p>
-        <p>These are sample posts. Press the button to see what Hide the Slop does.</p>
+        <p>These are sample posts. The two flyers are real AI slop, made for this demo, and the dog is real. Press the button to see what Hide the Slop does.</p>
         <div id="feed" class="feed">
           <article class="post slop">
-            <div class="flyer"><b>Grand opening!!!</b><span>#aiart #midjourney</span></div>
+            <div class="photo">
+              <img src="images/robot-rock.webp" alt="An AI-made club flyer for Robot Rock Miami, with a muscular man in a robot helmet" width="900" height="600" loading="lazy">
+              <p><b>Robot Rock grand opening</b><span>#aiart #midjourney</span></p>
+            </div>
             <div class="bar" hidden><b>Hide the Slop</b><span>an AI hashtag</span><span class="show">Show</span></div>
           </article>
           <article class="post">
             <div class="photo">
-              <img src="images/dog.jpg" alt="A curly white dog lying on a gray mat, looking up at the camera" width="900" height="675" loading="lazy">
+              <img src="images/dog.webp" alt="A curly white dog lying on a gray mat, looking up at the camera" width="900" height="675" loading="lazy">
               <p><b>A real dog</b><span>Photographed by a person. No robots involved.</span></p>
             </div>
           </article>
           <article class="post slop">
-            <div class="flyer two"><b>Sunset jazz night</b><span>Marked "AI content"</span></div>
+            <div class="photo">
+              <img src="images/sunset-jazz.webp" alt="An AI-made flyer for a rooftop jazz night, with a saxophone player and a city skyline at sunset" width="900" height="600" loading="lazy">
+              <p><b>Sunset Jazz Night</b><span>Marked "AI content"</span></p>
+            </div>
             <div class="bar" hidden><b>Hide the Slop</b><span>the site's AI label</span><span class="show">Show</span></div>
           </article>
         </div>
-        <div class="choices"><button id="toggle" class="primary">Hide the slop</button></div>
       </div>
     </section>
 

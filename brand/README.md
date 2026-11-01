@@ -15,7 +15,7 @@ Vectors and icons by [SVG Repo](https://www.svgrepo.com).
 
 ## The dog
 
-Kevin Sousa took the photo in `site/public/images/dog.jpg`. It isn't covered by the MIT license either.
+Kevin Sousa took the photo in `site/public/images/dog.webp`, and made the two AI flyers beside it for the site's demo. None of these are covered by the MIT license.
 
 ## Using the logo
 

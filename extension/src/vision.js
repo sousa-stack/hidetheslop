@@ -11,6 +11,10 @@ var SlopVision = (() => {
   // Pinned to one revision and checked by hash, so the model can't change under us.
   const MODEL_URL =
     'https://huggingface.co/Xenova/clip-vit-base-patch32/resolve/6b7c523703ae26e39be4b03774966f8571c7f523/onnx/vision_model_int8.onnx';
+  // A copy of the same file, so the picture check survives that Hugging Face account
+  // going away. The hash check below applies to both.
+  const MIRROR_URL =
+    'https://models.hidetheslop.com/clip-vit-base-patch32/6b7c523703ae26e39be4b03774966f8571c7f523/vision_model_int8.onnx';
   const MODEL_SHA256 = '0ab0c1b3ace708e539633af1744d5a95247fe4e14d3e08ff197ef82a6cb9bd93';
   const MODEL_BYTES = 88648877;
   const CACHE = 'hidetheslop-model';
@@ -35,10 +39,8 @@ var SlopVision = (() => {
     return [...hash].map((b) => b.toString(16).padStart(2, '0')).join('');
   }
 
-  // onProgress(fraction) is called while downloading.
-  async function download(onProgress = () => {}) {
-    if (await isDownloaded()) return;
-    const res = await fetch(MODEL_URL, { credentials: 'omit' });
+  async function fetchChecked(url, onProgress) {
+    const res = await fetch(url, { credentials: 'omit' });
     if (!res.ok || !res.body) throw new Error(`download failed (HTTP ${res.status})`);
     const buf = new Uint8Array(MODEL_BYTES);
     const reader = res.body.getReader();
@@ -52,6 +54,20 @@ var SlopVision = (() => {
       onProgress(n / MODEL_BYTES);
     }
     if (n !== MODEL_BYTES || (await sha256(buf)) !== MODEL_SHA256) throw new Error('downloaded file did not match');
+    return buf;
+  }
+
+  // onProgress(fraction) is called while downloading. Our copy first, then Hugging
+  // Face. It's cached under MODEL_URL wherever it came from, so existing downloads count.
+  async function download(onProgress = () => {}) {
+    if (await isDownloaded()) return;
+    let buf;
+    try {
+      buf = await fetchChecked(MIRROR_URL, onProgress);
+    } catch {
+      onProgress(0);
+      buf = await fetchChecked(MODEL_URL, onProgress);
+    }
     const cache = await caches.open(CACHE);
     await cache.put(MODEL_URL, new Response(buf, { headers: { 'content-type': 'application/octet-stream' } }));
   }

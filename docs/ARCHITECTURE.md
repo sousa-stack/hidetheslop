@@ -63,7 +63,7 @@
 - `visionRatings`: `{ ai: [{key, e}], real: [...] }`, where `e` is the 512-number embedding. At most 500 of each kind.
 - `visionModel`: the classifier retrained from those ratings. If it's missing, `vision-weights.json` is used.
 
-**Cache Storage `hidetheslop-model`** holds the CLIP model file, downloaded from a pinned Hugging Face revision and checked against its SHA-256 hash (`vision.js`).
+**Cache Storage `hidetheslop-model`** holds the CLIP model file, downloaded from our R2 copy at `models.hidetheslop.com`, or a pinned Hugging Face revision if that fails, and checked against its SHA-256 hash (`vision.js`).
 
 ## The picture classifier
 

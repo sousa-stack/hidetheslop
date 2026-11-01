@@ -15,3 +15,5 @@ api/dist/
 
 .DS_Store
 .claude/
+.wrangler/
+site/originals/

@@ -19,7 +19,7 @@ Without the picture check, an AI image with its metadata stripped that nobody la
 
 ## The picture check
 
-Turning it on downloads an 89 MB model (OpenAI's CLIP ViT-B/32, the int8 ONNX copy at `Xenova/clip-vit-base-patch32`) from Hugging Face once. The download is pinned to one revision and checked against a SHA-256 hash. It runs on your computer in WebAssembly, about a quarter second per picture. CLIP turns each picture into 512 numbers, and a small classifier (`extension/src/vision-weights.json`) decides from those whether it looks AI-made. That classifier was trained on hand-sorted examples of real Facebook slop and real posts. **How sure before hiding** in Settings sets the cutoff (default 70%). Videos always need at least 90%, because the classifier was trained on still images.
+Turning it on downloads an 89 MB model (OpenAI's CLIP ViT-B/32, the int8 ONNX copy at `Xenova/clip-vit-base-patch32`) once, from this project's copy on Cloudflare or from Hugging Face. The download is pinned to one revision and checked against a SHA-256 hash. It runs on your computer in WebAssembly, about a quarter second per picture. CLIP turns each picture into 512 numbers, and a small classifier (`extension/src/vision-weights.json`) decides from those whether it looks AI-made. That classifier was trained on hand-sorted examples of real Facebook slop and real posts. **How sure before hiding** in Settings sets the cutoff (default 70%). Videos always need at least 90%, because the classifier was trained on still images.
 
 Ready-made AI-image detectors did badly on flyers: one flagged half the human-made flyers, another missed half the AI ones. The comparison is in `eval/`.
 
@@ -55,7 +55,7 @@ If Firefox didn't grant site access at install, the settings page opens with an 
 
 ## Privacy
 
-To check an image, the extension downloads that image again from the server the page already loaded it from, without cookies: once per picture, whole if the picture check is on, or just the first 512 KB for the metadata check alone. Hosts known to strip metadata (Facebook's and Instagram's) aren't downloaded just for that. Nothing is sent to any other server. The only other download is the model, from Hugging Face, when you turn the picture check on. There are no analytics. Settings sync through your browser account.
+To check an image, the extension downloads that image again from the server the page already loaded it from, without cookies: once per picture, whole if the picture check is on, or just the first 512 KB for the metadata check alone. Hosts known to strip metadata (Facebook's and Instagram's) aren't downloaded just for that. Nothing is sent to any other server. The only other download is the model, from this project's copy on Cloudflare or from Hugging Face, when you turn the picture check on. There are no analytics. Settings sync through your browser account.
 
 Shared ratings are planned, and aren't in the extension yet. They'll be off until you turn them on, and will send only what you explicitly rate, as a hash and a vote. Nothing stored will identify you. Checking pictures will stay on your device, so no server learns what you look at. The design is in [docs/CROWD-API.md](docs/CROWD-API.md).
 
