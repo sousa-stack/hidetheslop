@@ -108,7 +108,7 @@ Errors are `{error: <short code>}` and never repeat the input. A batch with two 
 
 The extension does its work on people's own computers, so more users barely touch the server. Only three things travel over the network, and each is sized for a surge:
 
-- **The model (89 MB, once per person who turns on the picture check).** Never serve it from the droplet. 1,000 downloads a day is about 2.7 TB a month, which on a droplet costs about $17–21 a month and competes with the API for bandwidth. On Cloudflare R2 the same traffic should be free: no egress fees, and 30,000 reads is well inside the 10 million free each month. Confirm custom-domain egress is covered when setting it up. Today the file comes from Hugging Face, which publishes no bandwidth cap for it, and its limit of 3,000 requests per IP every 5 minutes is far above this use.
+- **The model (89 MB, once per person who turns on the picture check).** Never serve it from the droplet. 1,000 downloads a day is about 2.7 TB a month, which on a droplet costs about $17–21 a month and competes with the API for bandwidth. On Cloudflare R2 the same traffic should be free: no egress fees, and 30,000 reads is well inside the 10 million free each month. The file is live at `models.hidetheslop.com`, with Hugging Face as the fallback, which publishes no bandwidth cap for it. Its limit of 3,000 requests per IP every 5 minutes is far above this use.
 - **The verdict list.** Cloudflare caches it, so a surge in users mostly doesn't reach the droplet. This depends on the Cache Rule in the going-live checklist.
 - **Votes.** Only explicit ratings, in small batches, and rate limited per IP. This is the one thing that does reach the droplet, and it's tiny.
 

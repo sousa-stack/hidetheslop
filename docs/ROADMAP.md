@@ -30,7 +30,7 @@ Hide the Slop stays free and open source, on every platform we can reach. It sho
    - **Clean up:** `test-images/` has one near-identical pair with the same label, which slightly flatters the leave-one-out score.
 2. **Retest in Firefox.** Kevin last used it in Firefox around version 1.1. Since then 1.2–1.5 changed the background page (the model, ratings, one download). Test with `about:debugging`, then `test/live.html`.
    - **Memory:** the 12 GB leak Kevin saw in Firefox's WebExtensions process was ours, and 1.5.1 fixes it. He confirmed it in real use in Firefox and Chrome on 2026-10-31. It's untested on Firefox versions older than 159, and the extension's minimum is 128.
-3. **Host the model ourselves.** The file is on Cloudflare R2 in the `hidetheslop-models` bucket, and 1.7.2 tries it first, then Hugging Face. Both are checked by the same SHA-256 hash. Still to do: connect `models.hidetheslop.com` to the bucket. Don't serve it from the droplet. The numbers are in CROWD-API.md under "If it takes off".
+3. **Host the model ourselves.** The file is on Cloudflare R2 in the `hidetheslop-models` bucket, and 1.7.2 tries it first, then Hugging Face. Both are checked by the same SHA-256 hash, and `models.hidetheslop.com` is connected. Done. Don't serve it from the droplet. The numbers are in CROWD-API.md under "If it takes off".
 4. **Privacy policy page.** Both stores require one, because the extension reads every site. The truth is simple:
    - Pictures are re-downloaded from where the page got them, without cookies.
    - The model comes from Hugging Face (or our mirror).
