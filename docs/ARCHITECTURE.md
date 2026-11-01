@@ -74,6 +74,10 @@
 - **Why this approach:** ready-made AI-image detectors did badly on flyers, the main kind of slop here. See `eval/README.md`.
 - **Retraining:** after each rating, the background retrains on the shipped examples plus your ratings, which takes about 0.2–0.4 seconds. A new version rebuilds your classifier from your ratings when it installs.
 
+## The website
+
+`site/` is plain HTML, CSS and a little JavaScript, deployed as static files on Cloudflare Workers. `site/build.mjs` copies `poster.css` and the logo in from `extension/src`, so the site and extension share one look. The model is a separate file on Cloudflare R2, not part of the site.
+
 ## The API
 
 `api/` is a small server that pools ratings between people: Fastify, Drizzle and Postgres, behind Caddy and Cloudflare on one droplet. **The extension doesn't call it yet**, so everything above still runs entirely on your computer. The design, the privacy rules and what the extension will need are in [CROWD-API.md](CROWD-API.md).

@@ -65,13 +65,14 @@ Shared ratings are planned, and aren't in the extension yet. They'll be off unti
 |---|---|
 | `extension/` | The extension. `src/` is the source; `build.mjs` adds each browser's manifest. |
 | `api/` | The server for shared ratings, which the extension doesn't call yet. |
+| `site/` | [hidetheslop.com](https://hidetheslop.com) and the privacy policy. |
 | `eval/` | Scripts that compared detectors and train the picture classifier. `npm install` there, then `./get-models.sh`. |
 | `brand/` | The logo. `extension/tools/make_icons.sh` makes the toolbar icons from it. |
 | `test-images/` | Hand-sorted example pictures, **not in git**: they're real people's posts. The extension ships only their 512-number summaries. |
 
 Paths below are inside `extension/` unless they start with `eval/`.
 
-- `node --test test/meta.test.mjs` runs the metadata detector tests.
+- `node --test test/meta.test.mjs` runs the metadata detector tests, and `test/download.test.mjs` runs the model download with the real file.
 - `src/ort/` is onnxruntime-web (see `src/ort/VERSION`). `src/vision.js` runs the model. Chrome runs it in `offscreen.html`, because its background service worker can't. Firefox runs it in the background page.
 - `eval/test-vision.html` runs `background.js` and `vision.js` in a browser, with the real model and stubbed extension APIs. It checks the scores match the Mac test and that ratings retrain the classifier. Serve the top folder with `python3 -m http.server 8767` and open `http://localhost:8767/eval/test-vision.html`.
 - `test/live.html` is for the installed extension in a real browser: a plain page of your `test-images` examples. Serve the top folder on port 8767 and open `/extension/test/live.html`.

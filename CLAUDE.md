@@ -1,6 +1,6 @@
 # Hide the Slop: guide for agents
 
-A Chrome and Firefox (Manifest V3) extension that hides AI-generated posts, pictures and ads, plus a small API that pools ratings between people without collecting personal data or browsing history. Personal open-source project by Kevin Sousa (GitHub `sousa-stack`), heading for a public launch at hidetheslop.com. User-facing docs are in [README.md](README.md). This file is for whoever works on the code next.
+A Chrome, Firefox and Edge (Manifest V3) extension, with Safari planned for launch, that hides AI-generated posts, pictures and ads, plus a small API that pools ratings between people without collecting personal data or browsing history. Personal open-source project by Kevin Sousa (GitHub `sousa-stack`), heading for a public launch at hidetheslop.com. User-facing docs are in [README.md](README.md). This file is for whoever works on the code next.
 
 The name is **Hide the Slop** everywhere. Older notes may say "stoptheslop"; don't use that.
 
@@ -8,7 +8,7 @@ Read these before changing things:
 
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): how the pieces talk to each other, storage keys, the picture classifier.
 - [docs/TESTING.md](docs/TESTING.md): every test, and how to test the installed extension on real Facebook.
-- [docs/ROADMAP.md](docs/ROADMAP.md): what's done, what's left before launch, ideas after it.
+- [docs/ROADMAP.md](docs/ROADMAP.md): **start with "Where things stand"**: what's live, what's never been run, the order of work and open questions.
 - [docs/CROWD-API.md](docs/CROWD-API.md): the privacy promises, the API design, how the project pays for itself, and going live.
 - [CHANGELOG.md](CHANGELOG.md): what each version changed and why.
 
@@ -35,7 +35,10 @@ api/                the server: Fastify, TypeScript, Drizzle, Postgres
   src/              routes/, db/schema.ts, jobs/aggregate.ts, config.ts
   drizzle/          generated migrations, committed
   test/             tests against a real Postgres
-site/               hidetheslop.com and the privacy policy; build.mjs writes dist/, wrangler.jsonc deploys it
+site/               hidetheslop.com and the privacy policy
+  public/           the pages; poster.css and the logo come from extension/src at build time
+  build.mjs         writes dist/; wrangler.jsonc deploys it
+  tools/            optimize_images.py (small WebP files from originals/, which isn't in git)
 docker-compose.yml, Caddyfile, deploy.sh, harden.sh, backup.sh   production
 .github/workflows/  tests the API and deploys it
 eval/               scripts that compared detectors and train the picture classifier
@@ -48,8 +51,9 @@ docs/               architecture, testing, roadmap
 
 ```bash
 cd extension && node build.mjs                 # builds both browsers
-cd extension && node --test test/meta.test.mjs # metadata detector tests
+cd extension && node --test test/meta.test.mjs test/download.test.mjs # detector and model download tests
 cd api && npm run typecheck && ./scripts/test-local.sh # API tests on a throwaway Postgres
+cd site && node build.mjs                      # builds the website into dist/
 ```
 
 The extension has no linter or CI yet; that's on the roadmap. The API is tested by `.github/workflows/deploy.yml`. `dist/` is ignored. Bump `version` in `extension/build.mjs` for every user-visible change.
@@ -86,7 +90,16 @@ The extension's conventions above don't apply here: `api/` is TypeScript with a 
 
 ## Production
 
-Nothing is live yet. `docs/CROWD-API.md` has Kevin's going-live checklist.
+**Live on Cloudflare:** the website and the model. **Not live:** the API, because there's no droplet yet. `docs/CROWD-API.md` has Kevin's going-live checklist.
+
+- The domain is registered at Hostinger, where it renews, and its DNS is on Cloudflare.
+- **Website:** the `hidetheslop-site` Worker. Run `node build.mjs` in `site/`, then `npx wrangler@4.156.0 deploy`. Only deploy when Kevin asks. It uses his `wrangler login` on this Mac, so a logged-out session needs him to log in again.
+- **Model:** the `hidetheslop-models` R2 bucket, at `models.hidetheslop.com`. A new model version needs a new key and a new hash in `vision.js`, because the file is cached forever.
+- **Email:** `hello@hidetheslop.com` forwards through Cloudflare Email Routing.
+- The Cloudflare connector can read the account and search the docs, but it can't change DNS, deploy, or connect domains.
+- This Mac runs Docker through Colima and has no Compose plugin, so `docker compose` doesn't work here until Kevin OKs installing it.
+
+Once the droplet exists:
 
 - The host is the `DEPLOY_HOST` GitHub secret, the user is `deploy`, and the app directory is `~/hidetheslop`.
 - Pushing API or infra changes to `main` tests them, and deploys once the `DEPLOY_ENABLED` repo variable is `true`. Don't SSH in to fix something that should be a commit.
@@ -103,6 +116,7 @@ Nothing is live yet. `docs/CROWD-API.md` has Kevin's going-live checklist.
 - **Chrome's service worker can't run the model.** It runs in `offscreen.html`, while Firefox runs it in the background page. Both paths have to be tested.
 - **Firefox stops the background page after 30 idle seconds and never frees WebAssembly memory that lived in it.** That leaked 12 GB until 1.5.1. Keep `ort.env.wasm.proxy = true` in `vision.js`, so the model runs in a worker whose memory goes when the page does. Activity Monitor can hide this kind of leak, because the memory gets compressed.
 - **Firefox doesn't draw `::before` on `<input>`.** That's why the Settings switches are drawn with a gradient.
+- **Phone photos can carry location data.** Run published pictures through `site/tools/optimize_images.py`, which strips metadata and keeps them small.
 - **The in-app browser pane, when hidden, doesn't report what's on screen**, so IntersectionObserver never fires. The harness replaces IntersectionObserver for this reason. Treat timing numbers from a hidden pane as meaningless.
 - **Browsers cache the test server's files.** Use a new port, or the cache-busting in `test/options-preview.html`, when a change "doesn't show up".
 - The classifier was trained on stills, so videos need at least 90% confidence (`MIN_VIDEO_SCORE` in `content.js`).

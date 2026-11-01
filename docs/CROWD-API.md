@@ -1,6 +1,6 @@
 # Crowd votes and the API
 
-This is the design for sharing ratings between people. `api/` is the server. The extension doesn't talk to it yet: that's the next phase, and until it ships, the README's "nothing is sent to any other server" stays true.
+This is the design for sharing ratings between people. `api/` is the server. The extension doesn't talk to it yet: that's the next phase, and until it ships, the README's "nothing is sent to any other server" stays true. Kevin wants this tested on the droplet with real data before the extension goes to any store.
 
 The order of work is in [ROADMAP.md](ROADMAP.md). The build plan for the first version is in [plans/2026-10-30-local-api.md](plans/2026-10-30-local-api.md).
 
@@ -118,17 +118,17 @@ Prices checked on 2026-11-01: [R2](https://developers.cloudflare.com/r2/pricing/
 
 ## Paying for it
 
-Rough costs, from memory, so check them: $10–15 a month for the droplet and backups, about $1 for the domain, free Cloudflare, $5 once for Chrome, free for Firefox, and $99 a year for Apple if we ship on Safari or iPhone.
+Rough costs, from memory, so check them: $10–15 a month for the droplet and backups, about $1 for the domain, free Cloudflare, $5 once for Chrome and free for Firefox. Kevin already has an Apple developer account for Safari.
 
 1. **Donations first.** GitHub Sponsors and Ko-fi, a small link in Settings, and a public "server costs this month" line on the site.
-2. **Paid iPhone app later,** $2–5, with the source still open.
+2. **Maybe a paid iPhone app,** $2–5, with the source still open. Kevin hasn't decided.
 3. **Hosted moderator tools as a bonus:** a Discord bot or an API for group admins, built only when someone asks. Check them against store policy first, because the model learns from votes.
 
 `api_keys` is deliberately not in the schema. Add it only when a paid API is real. When that happens, keys are random, so hash them with HMAC-SHA-256 and `API_KEY_PEPPER`, not argon2, which is too slow to run on every request.
 
 ## Going live (Kevin's checklist)
 
-None of this is done, and all of it needs Kevin.
+None of this is done, and all of it needs Kevin. Prove the stack with `docker compose` locally first, because it has never started as a whole.
 
 1. Create the droplet (Ubuntu 24.04) and run `harden.sh`. Confirm with `sudo sshd -T | grep -i passwordauthentication`, and test `ssh deploy@<ip>` from a new terminal before closing the old one.
 2. Add a DigitalOcean Cloud Firewall allowing 80 and 443 from Cloudflare's ranges only. Docker's published ports skip ufw, so ufw alone doesn't protect them. Port 22 stays open, key-only with fail2ban, because GitHub's runners don't have fixed addresses.
