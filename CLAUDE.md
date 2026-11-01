@@ -91,7 +91,7 @@ The extension's conventions above don't apply here: `api/` is TypeScript with a 
 
 ## Production
 
-**Live on Cloudflare:** the website and the model. **Not live:** the API, because there's no droplet yet. `docs/CROWD-API.md` has Kevin's going-live checklist.
+**Live on Cloudflare:** the website and the model. **Live on the droplet:** the API and the status page, behind Cloudflare. The extension doesn't call the API yet. `docs/CROWD-API.md` has Kevin's going-live checklist.
 
 - The domain is registered at Hostinger, where it renews, and its DNS is on Cloudflare.
 - **Website:** the `hidetheslop-site` Worker. Run `node build.mjs` in `site/`, then `npx wrangler@4.156.0 deploy`. Only deploy when Kevin asks. It uses his `wrangler login` on this Mac, so a logged-out session needs him to log in again.

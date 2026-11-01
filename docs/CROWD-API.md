@@ -146,13 +146,13 @@ Rough costs, from memory, so check them: $10–15 a month for the droplet and ba
 
 ## Going live (Kevin's checklist)
 
-None of this is done, and all of it needs Kevin. The whole stack has been proven on his Mac with `scripts/local-stack.sh` (see [TESTING.md](TESTING.md)), so what's left is what only a droplet can show: Cloudflare in front, real certificates, real client IPs, the firewall, and amd64.
+Everything except steps 7 and 15 was done on 2026-11-01, and the API is live. Most of it needs Kevin, because it creates accounts, tokens or access.
 
-1. Create the droplet (Ubuntu 24.04) and run `harden.sh`. Confirm with `sudo sshd -T | grep -i passwordauthentication`, and test `ssh deploy@<ip>` from a new terminal before closing the old one.
+1. Create the droplet (Ubuntu 26.04, the 2 GB Premium AMD plan) and run `harden.sh`. Confirm with `sudo sshd -T | grep -i passwordauthentication`, and test `ssh deploy@<ip>` from a new terminal before closing the old one.
 2. Add a DigitalOcean Cloud Firewall allowing 80 and 443 from Cloudflare's ranges only. Docker's published ports skip ufw, so ufw alone doesn't protect them. Port 22 stays open, key-only with fail2ban, because GitHub's runners don't have fixed addresses.
 3. Add a read-only deploy key for the private repo, and clone it to `~/hidetheslop`.
 4. Copy `.env.example` to `.env` and fill it in. Use hex for the database password, because it goes into a URL.
-5. Point `api.hidetheslop.com` and `status.hidetheslop.com` at the droplet in Cloudflare, with SSL set to Full (strict). Turn off "Always Use HTTPS" for these hosts until Caddy has its certificates. Add a Cache Rule so Cloudflare caches `/v1/verdicts`, because it doesn't cache JSON by default. Set the rule's Edge TTL to respect the origin's `Cache-Control`, and to bypass the cache when there isn't one. Only a successful response carries that header, so a 429 or 5xx is never cached. Don't use a fixed TTL.
+5. Point `api.hidetheslop.com` and `status.hidetheslop.com` at the droplet in Cloudflare, with SSL set to Full (strict). Turn off "Always Use HTTPS" for these hosts until Caddy has its certificates. Add a Cache Rule so Cloudflare caches `/v1/verdicts`, because it doesn't cache JSON by default. Set the rule's Edge TTL to respect the origin's `Cache-Control`, and to bypass the cache when there isn't one. Only a successful response carries that header, so a 429 or 5xx is never cached. Also set Browser TTL to respect the origin, or Cloudflare's 4-hour default replaces the API's 1 hour for browsers. Don't use a fixed TTL.
    - **Don't add an AAAA record for the origin** until Caddy's `trusted_proxies` match has been tested over IPv6. If it doesn't match, Caddy won't believe `CF-Connecting-IP`, and clients behind one Cloudflare edge would share a rate limit.
 6. Open `status.hidetheslop.com` straight away and create the Uptime Kuma admin. Whoever gets there first owns it. Its first-run database page is skipped, because `docker-compose.yml` sets SQLite.
 7. Add the GitHub secrets `DEPLOY_HOST`, `DEPLOY_SSH_KEY` and `DEPLOY_HOST_FINGERPRINT`, and set the repo variable `DEPLOY_ENABLED=true`. A deploy fails if the fingerprint is empty, so host key checking can't be skipped by accident.

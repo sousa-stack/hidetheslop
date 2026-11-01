@@ -12,17 +12,18 @@ Updated 2026-11-01. Start here.
 - [hidetheslop.com](https://hidetheslop.com) and its privacy policy, on Cloudflare Workers. The install buttons say "coming soon".
 - The model at `models.hidetheslop.com`, on Cloudflare R2, with Hugging Face as the fallback.
 - `hello@hidetheslop.com`, forwarding to Kevin's Gmail. Tested.
+- The API at `api.hidetheslop.com` and the status page at `status.hidetheslop.com`, on the droplet behind Cloudflare. Checked live: direct access is blocked, input rules and rate limits work, verdicts are cached, and no client IPs are in the logs. It holds no real votes yet, and the extension doesn't call it.
 
 **Built, not live:**
 - The extension, version 1.7.3. Not in any store.
-- The API in `api/`, 96 tests passing, with its deploy files. There's no droplet yet, and the extension doesn't call it.
+- Deploys from GitHub, which stay off until the secrets are added.
 - The production stack, proven on this Mac by `scripts/local-stack.sh`: 30 checks through the real Compose file and a Caddyfile generated from the real one, including `deploy.sh` rollback and an encrypted backup and restore.
 - The perceptual hash, `extension/src/phash.js`. It isn't called by the extension yet.
 
 **Never run for real:**
-- `deploy.sh`, `backup.sh` and `harden.sh` on a real server, and the workflow's deploy job. Its test job passes on GitHub.
-- The stack on amd64: this Mac is arm64 and the droplet won't be. Backups to real R2, and the hash on a Chrome offscreen page or a Firefox background page. It has passed on web pages in Chrome, Firefox and Safari, and on extension pages in Kevin's Chrome and Firefox.
-- Real client IPs through Cloudflare.
+- The workflow's deploy job. Its test job passes on GitHub.
+- A backup with real rows in it: they run nightly to R2 and the lock is proven, but the database is still empty.
+- The hash on a Chrome offscreen page or a Firefox background page. It has passed on web pages in Chrome, Firefox and Safari, and on extension pages in Kevin's Chrome and Firefox.
 - Clicking "Turn it on" on a real install, which would be the first real download from the model mirror.
 - A true first install opening the welcome page, and the update rebuild of a person's classifier.
 - Sticky buttons on a real phone, and Firefox versions older than 159.

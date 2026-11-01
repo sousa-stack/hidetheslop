@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-time droplet hardening. Run ONCE as root on a fresh Ubuntu 24.04 droplet.
+# One-time droplet hardening. Run ONCE as root on a fresh Ubuntu 26.04 droplet.
 # Usage: DEPLOY_PUBKEY="ssh-ed25519 AAAA..." ./harden.sh
 set -euo pipefail
 
