@@ -17,7 +17,28 @@ h1 { text-align: center; }
 /* The button stays in reach while you look at the feed. On desktop it rides along with
    the big word. On a phone it sits at the bottom of the screen until the section ends. */
 .try .side { position: sticky; top: 20px; align-self: start; }
-.try .choices { margin-top: 16px; }
+.try .choices { position: relative; margin-top: 16px; }
+
+/* A marker note pointing at the button. Every stroke draws itself in turn, using a dash
+   as long as the line, and the button shakes when the arrow lands. */
+.doodle { position: absolute; top: 100%; left: 0; overflow: visible; pointer-events: none; transition: opacity .3s; }
+.doodle path { stroke: var(--red); stroke-width: 3.6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 1; }
+.draw .doodle path { animation: draw var(--for) linear var(--at) forwards; }
+.used .doodle { opacity: 0; }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+
+.shake { animation: shake .5s ease-in-out; }
+@keyframes shake {
+  20% { transform: rotate(-3deg) translateX(-2px); }
+  40% { transform: rotate(3deg) translateX(2px); }
+  60% { transform: rotate(-2deg) translateX(-1px); }
+  80% { transform: rotate(1deg); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .doodle path { stroke-dashoffset: 0; }
+  .draw .doodle path, .shake { animation: none; }
+  .try .choices { transition: none !important; }
+}
 .post { scroll-margin-top: 16px; }
 
 .feed { display: grid; gap: 10px; margin-top: 14px; }
@@ -60,7 +81,9 @@ h1 { text-align: center; }
   .line.try { display: flex; flex-direction: column; }
   .try .side { display: contents; }
   .try .copy { order: 1; }
-  .try .choices { order: 2; position: sticky; bottom: 12px; margin-top: 12px; }
+  .try .choices { order: 2; position: sticky; bottom: 12px; margin-top: 12px; transition: transform .3s ease-out, visibility .3s; }
+  .try.waiting .choices { transform: translateY(calc(100% + 24px)); visibility: hidden; }
+  .doodle { display: none; }
   .try .choices button { width: 100%; box-shadow: 0 2px 10px rgba(0, 0, 0, .35); }
   .plate.short { padding: 18px; gap: 14px; }
   .plate.short img { width: 64px; height: 64px; }
