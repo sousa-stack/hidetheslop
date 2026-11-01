@@ -12,10 +12,10 @@ Updated 2026-11-01. Start here.
 - [hidetheslop.com](https://hidetheslop.com) and its privacy policy, on Cloudflare Workers. The install buttons say "coming soon".
 - The model at `models.hidetheslop.com`, on Cloudflare R2, with Hugging Face as the fallback.
 - `hello@hidetheslop.com`, forwarding to Kevin's Gmail. Tested.
-- The API at `api.hidetheslop.com` and the status page at `status.hidetheslop.com`, on the droplet behind Cloudflare. Checked live: direct access is blocked, input rules and rate limits work, verdicts are cached, and no client IPs are in the logs. It holds no real votes yet, and the extension doesn't call it.
+- The API at `api.hidetheslop.com` and the status page at `status.hidetheslop.com`, on the droplet behind Cloudflare. Checked live: direct access is blocked, input rules and rate limits work, verdicts are cached, and no client IPs are in the logs. It holds no real votes yet.
 
 **Built, not live:**
-- The extension, version 1.7.3. Not in any store.
+- The extension, version 1.8.0, with voting built and off by default. Not in any store, and no real vote has been sent yet.
 - Deploys from GitHub, which stay off until the secrets are added.
 - The production stack, proven on this Mac by `scripts/local-stack.sh`: 30 checks through the real Compose file and a Caddyfile generated from the real one, including `deploy.sh` rollback and an encrypted backup and restore.
 - The perceptual hash, `extension/src/phash.js`. It isn't called by the extension yet.
@@ -30,25 +30,24 @@ Updated 2026-11-01. Start here.
 
 ## Order of work
 
-**Kevin's decision, 2026-11-01:** shared ratings get tested on the droplet with real data **before** the extension goes to any store. This replaces the earlier plan of starting the droplet just before launch. It means paying for the server before there are users, and in exchange the server, voting and verdicts are proven first.
+**Kevin's decision, 2026-11-01:** shared ratings get tested on the droplet with real data **before** the extension goes public in any store. An unlisted listing doesn't count, because nobody can find it without the link. This replaces the earlier plan of starting the droplet just before launch. It means paying for the server before there are users, and in exchange the server, voting and verdicts are proven first.
 
 1. **Same-template test (item 17).** First pass done: 23 flyers from 4 templates gave no false match from layout, so the hash design stands. Details are in CROWD-API.md. Keep adding flyers to `test-images/flyers/<template>/`, especially human-made ones, because they also feed item 1.
 2. **The droplet (item 20).** The stack is proven locally, so follow the going-live checklist in CROWD-API.md.
-3. **Voting in the extension (item 18),** on an unlisted store build, so it's one click to install and updates itself. See "Installing before launch". Update the privacy policy and the Firefox data permission first, and turn on no sharing for anyone before the policy says what's sent. The policy must also name Cloudflare R2 as where encrypted backups are kept, and say how long: 14 nights on the droplet, 30 days in R2, plus droplet backups.
+3. **Voting in the extension (item 18).** Build it and test it on Kevin's two laptops with a manual install, because every store update can wait days for review. Once it works there, submit unlisted to Chrome and Firefox, to prove the real install and update path and start the review early. See "Installing before launch". Update the privacy policy and the Firefox data permission first, and turn on no sharing for anyone before the policy says what's sent. The policy must also name Cloudflare R2 as where encrypted backups are kept, and say how long: 14 nights on the droplet, 30 days in R2, plus droplet backups.
 4. **Test with real data.** Kevin votes on real feeds from two laptops with different accounts. Confirm votes arrive, the aggregate job runs, verdicts publish, and the rules in the promises section of CROWD-API.md hold on the live server: no IPs in logs, lone hashes expire. Restore a backup to prove it works, and load-test the votes route.
 5. **Verdict downloads (item 19).** Build them against real verdicts, and confirm the extension hides a picture from the list.
 6. **Safari (item 23),** so it launches with the other browsers.
 7. **The launch list below,** then the "Going public" list, then the store listings.
 
 **Open questions for Kevin:**
-- Does an unlisted Chrome listing count as "going to a store"? It's reviewed by the store, but nobody can find it without the link. See "Installing before launch".
 - Is the Safari app free, or the paid iPhone idea from earlier? Kevin already has an Apple developer account, so the $99 fee no longer needs covering.
 
 **Votes during testing:** the threshold counts installs, not people. Two laptops with Chrome and Firefox, plus a second Chrome profile on one of them, make 5 installs, so it can stay at 5. `CONFIRM_MIN_VOTES` can lower it if that gets tedious, with a warning in the logs, and no verdicts are seeded. This proves the pipeline, not how good the crowd's judgment is.
 
 ## Installing before launch
 
-Kevin wants installing to be one click and updates to be automatic, including while testing, because people won't load an unpacked build. Each store has a way to do this without a public listing. Checked against the stores' docs on 2026-11-01; none of it has been tried yet.
+Kevin wants installing to be one click and updates to be automatic, because people won't load an unpacked build. His two laptops use a manual install while voting is built, then unlisted listings once it works. Going public later means switching the same listing to Public. Each store has a way to do this without a public listing. Checked against the stores' docs on 2026-11-01; none of it has been tried yet.
 
 | Browser | How | Worth knowing |
 |---|---|---|

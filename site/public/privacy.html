@@ -17,14 +17,14 @@
     </header>
 
     <div class="policy">
-      <p class="lead">Hide the Slop does its work on your computer. It has no accounts, no analytics and no ads, and it doesn't send what you browse to anyone.</p>
-      <p class="fine">Last updated November 1, 2026. This covers version 1.7.2 of the extension and this website.</p>
+      <p class="lead">Hide the Slop does its work on your computer. It has no accounts, no analytics and no ads, and it doesn't send what you browse to anyone. Sharing your ratings with other people is optional, and off until you turn it on.</p>
+      <p class="fine">Last updated November 1, 2026. This covers version 1.8.0 of the extension and this website.</p>
 
       <h2>What the extension reads</h2>
       <p>To find AI content, the extension reads the pages you visit: the text of posts, and the pictures and videos on them. This happens on your computer. That's why the extension asks for access to all sites, and it's what makes it work everywhere, including inside ads.</p>
 
       <h2>What leaves your computer</h2>
-      <p>Only these two things, and neither sends anything about you or what you browse:</p>
+      <p>Unless you turn on sharing, only these two things, and neither sends anything about you or what you browse:</p>
       <ul>
         <li><b>Pictures, downloaded again.</b> To check a picture, the extension downloads it again from the site that already showed it to you, without your cookies. That site sees a normal request for that picture.</li>
         <li><b>Your robot, downloaded once.</b> If you turn on the picture check, the 89 MB AI model downloads from a copy on Cloudflare, or from Hugging Face if that copy isn't available. Whichever one serves it sees a normal download from your internet address. If you never turn it on, this doesn't happen.</li>
@@ -36,23 +36,40 @@
         <li><b>Your ratings:</b> the numbers that describe each picture you rate, and the web address it came from.</li>
         <li><b>The addresses of pictures you hid by hand,</b> up to 1,000.</li>
         <li><b>Your robot,</b> if you downloaded it.</li>
+        <li><b>If you've ever turned on sharing:</b> the ratings waiting to send, a random secret that makes your vote codes, and the fingerprints of up to 5,000 pictures you've already shared. The secret and the fingerprints stay when you turn sharing off or forget your ratings, so that rating a picture again replaces your vote instead of adding a second one.</li>
       </ul>
-      <p>You can clear your ratings, hidden pictures and robot in Settings. Removing the extension deletes what it kept on your computer.</p>
+      <p>You can clear your ratings, hidden pictures and robot in Settings. Forgetting your ratings also clears any that are waiting to send. Removing the extension deletes what it kept on your computer.</p>
+
+      <h2>If you turn on sharing</h2>
+      <p>Your ratings can help hide slop for other people. This is off until you turn it on, on each browser separately, in Settings or on the welcome page. Firefox also asks you itself. Only ratings you make while it's on are sent, so ratings from before stay on your computer.</p>
+      <p>For each picture you rate, this goes to the Hide the Slop server at api.hidetheslop.com:</p>
+      <ul>
+        <li><b>A fingerprint of the picture:</b> a 64-bit hash, made on your computer. It's enough to spot copies of a picture, not to rebuild it.</li>
+        <li><b>Your answer:</b> AI or not AI, and whether you rated it or hid it by hand.</li>
+        <li><b>A vote code:</b> made from the fingerprint and your secret, so rating that picture again replaces your vote. Codes for different pictures look unrelated.</li>
+        <li><b>The numbers that describe the picture,</b> the same 512 your robot uses, squeezed to one byte each. These go only if the server asks for them, which it does once 3 or more installs have rated that exact picture, so a private photo only you rated never has them sent.</li>
+      </ul>
+      <p><b>What's never sent:</b> the picture, its web address, the page it was on, your name or account, any ID for you or your browser, or anything about pictures you only scrolled past. Ratings of video frames and ratings made in a private window stay on your computer.</p>
+      <p><b>When it's sent:</b> 1 to 6 hours after you rate, at most 5 ratings at a time, so the timing doesn't follow your browsing. <i>Send now</i> in Settings sends sooner, when you ask it to.</p>
+      <p><b>What the server sees:</b> the server and Cloudflare, which sits in front of it, see your internet address while a request is in transit, as with any request. The server doesn't log it, and keeps it in memory only to limit how many requests one address can make. The ratings in one batch arrive together, so someone with direct access to the live database could tell which ones came in the same request, without being able to tell who sent them. Your browser also sends its usual request details, such as its name, version and language. The server doesn't store those.</p>
+      <p><b>How it's used:</b> when enough installs agree a picture is AI, that picture's fingerprint goes in a public list, for the extension to use. Kevin Sousa, who makes Hide the Slop, may check the numbers by hand for forgeries and abuse, and they're used to retrain the robot everyone gets.</p>
+      <p><b>How long it's kept:</b> a picture with fewer than 5 votes is deleted 90 days after it was first seen. Pictures with 5 or more stay, because that's the list. Backups can hold deleted data about a month longer: 14 nights on the server, 30 days encrypted on Cloudflare R2, plus weekly backups of the whole server.</p>
+      <p><b>Taking it back:</b> turning sharing off stops sending and clears what's waiting straight away. Ratings already sent can't be taken back, because nothing ties them to you, so there's no way to find yours.</p>
 
       <h2>What about saving ratings to a file?</h2>
-      <p><i>Save to a file</i> makes a file on your computer containing only the numbers that describe each picture. Nothing is sent anywhere, and what you do with that file is up to you.</p>
+      <p><i>Save to a file</i> makes a file on your computer containing only the numbers that describe each picture. Nothing is sent anywhere unless you turn on sharing, and what you do with that file is up to you.</p>
 
       <h2>This website</h2>
       <p>This site has no analytics scripts or cookies of its own. It's hosted on Cloudflare, which handles your internet address to deliver the pages and to protect the site, and which provides basic traffic counts.</p>
 
       <h2>Selling data</h2>
-      <p>Your data isn't sold, because it isn't collected.</p>
+      <p>Nothing is sold: not your ratings, and not the hashes, numbers or lists made from them.</p>
 
       <h2>If this changes</h2>
-      <p>An optional way to share ratings with other people is planned. It isn't in the extension yet. It would stay off until you turn it on, and this policy will be updated to say exactly what it sends before it ships.</p>
+      <p>This policy will be updated to say exactly what's sent before any change ships.</p>
 
       <h2>Children</h2>
-      <p>The extension collects no personal data from anyone, including children.</p>
+      <p>The extension collects no personal data from anyone, including children. With sharing on, it sends only what's listed above.</p>
 
       <h2>Questions</h2>
       <p>Email <a href="mailto:hello@hidetheslop.com">hello@hidetheslop.com</a>.</p>

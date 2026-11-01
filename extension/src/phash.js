@@ -4,8 +4,8 @@
 // they do here is decode. Every later step is our own arithmetic, and changing any of
 // it after votes exist means a new hashVersion and splitting the data.
 //
-// Not called by the extension yet; that comes with the vote client. fromPixels is pure
-// so it runs in Node. fromBlob and fromBitmap need a page with OffscreenCanvas.
+// Only runs for a rating you're sharing (SlopVision.hash). fromPixels is pure so it runs
+// in Node. fromBlob and fromBitmap need a page with OffscreenCanvas.
 /* exported SlopHash */
 
 var SlopHash = (() => {

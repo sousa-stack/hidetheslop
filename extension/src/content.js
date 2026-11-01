@@ -294,13 +294,13 @@
     const ask = addBar(el, 'was this AI?', [
       ['AI, hide it', () => {
         ask.remove();
-        api.runtime.sendMessage({ type: 'learn', url: picture, label: 'ai' }).catch(() => {});
+        api.runtime.sendMessage({ type: 'learn', url: picture, label: 'ai', source: 'rated' }).catch(() => {});
         delete el.dataset.hidetheslop;
         hide(el, 'you said it was AI', picture);
       }],
       ['Not AI', () => {
         ask.remove();
-        api.runtime.sendMessage({ type: 'learn', url: picture, label: 'real' }).catch(() => {});
+        api.runtime.sendMessage({ type: 'learn', url: picture, label: 'real', source: 'rated' }).catch(() => {});
         const thanks = addBar(el, "got it, it'll learn from this", []);
         setTimeout(() => thanks.remove(), 2500);
       }],
@@ -546,7 +546,7 @@
     const el = post || img || target;
     const picture = src && /^(https?|data):/.test(src) ? src : biggestPicture(el);
     if (picture && settings.visualCheck) {
-      api.runtime.sendMessage({ type: 'learn', url: picture, label: 'ai' }).catch(() => {});
+      api.runtime.sendMessage({ type: 'learn', url: picture, label: 'ai', source: 'hid' }).catch(() => {});
     }
     if (el.dataset.hidetheslop === 'shown') delete el.dataset.hidetheslop;
     hide(el, 'you hid this', picture);

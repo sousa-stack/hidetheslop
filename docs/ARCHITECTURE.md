@@ -4,12 +4,15 @@
 
 | File | Runs in | Job |
 |---|---|---|
-| `common.js` | everywhere | `SLOP_API`, `SLOP_DEFAULTS` (every setting), `slopGetSettings()` |
+| `common.js` | everywhere | `SLOP_API`, `SLOP_DEFAULTS` (every synced setting), `slopGetSettings()`, `slopGetShare()`, `slopAskToShare()` |
 | `content.js` + `content.css` | every page, every frame | finds AI content and hides it; the bars, the hover button, the right-click handling |
 | `meta.js` | content script, background, offscreen | `SlopMeta.scan(bytes)`: AI markers in image metadata |
 | `background.js` | Chrome service worker or Firefox background page | downloads, the classifier, ratings and retraining, badge counts, context menu |
 | `train.js` | background, `eval/probe.mjs` | `SlopTrain`: the logistic-regression classifier (train and score) |
-| `vision.js` | Firefox background page, Chrome `offscreen.html`, options page | `SlopVision`: downloads the CLIP model, turns a picture into a 512-number embedding |
+| `vision.js` | Firefox background page, Chrome `offscreen.html`, options page | `SlopVision`: downloads the CLIP model, turns a picture into a 512-number embedding, hashes a picture for a shared rating |
+| `phash.js` | Firefox background page, Chrome `offscreen.html` | `SlopHash`: the perceptual hash a vote carries |
+| `votes.js` | background | `SlopVotes`: the token, the vote queue and sending, when you've turned sharing on |
+| `origin-rules.json` | Firefox only | takes `Origin` off requests to the API, because Firefox puts the install's random address in it |
 | `offscreen.html` / `offscreen.js` | Chrome only | hosts `vision.js`, because a service worker can't run it |
 | `ort/` | with `vision.js` | onnxruntime-web 1.31.1 (MIT), WebAssembly build |
 | `popup.*` | toolbar popup | count hidden on this page, show all, pause on this site |
@@ -42,17 +45,22 @@
 - **Picture check off, or the model failed:** `scanUrl` downloads only the first 512 KB and reads the metadata. Hosts that strip metadata (`STRIPS_METADATA`: fbcdn.net, cdninstagram.com) aren't downloaded at all for this.
 - Results are cached per URL, at most 2 picture checks run at once, and every download is made without cookies.
 
+## Sharing a rating
+
+`learn()` saves the rating first, so nothing later can lose it. If sharing was on when you rated, and it isn't a private window or a video frame, `hashUrl` gets the hash from wherever the model runs (`SlopVision.hash`, through a `hash` message on Chrome), and `SlopVotes.add` queues it with the embedding squeezed to int8. An hourly alarm sends what's due. See [CROWD-API.md](CROWD-API.md).
+
 ## Messages
 
 | From → to | `type` | Meaning |
 |---|---|---|
 | content → background | `check` `{url, meta, picture}` | → `{ meta, score }` or null |
-| content → background | `learn` `{url, label: 'ai'│'real'}` | save a rating and retrain |
+| content → background | `learn` `{url, label: 'ai'│'real', source: 'rated'│'hid'}` | save a rating, retrain, and queue a vote if sharing is on |
 | content → background | `stats` `{count, reasons}` | per-frame hidden count, for the badge and popup |
 | popup → background | `tabStats` `{tabId}` | totals for the popup |
+| options → background | `voteState`, `voteSend`, `voteClear` | the count and stuck state for Settings, **Send now**, and clearing the queue when you forget your ratings. The queue belongs to the background |
 | popup → content | `revealAll`, `whereAmI` | show everything / which host this tab is on |
 | background → content | `menu` `{id: 'hide'│'block', srcUrl}` | right-click menu choice |
-| background → offscreen | `inspect` `{url}`, with `target: 'offscreen'` | Chrome only |
+| background → offscreen | `inspect` `{url}`, `hash` `{url}`, with `target: 'offscreen'` | Chrome only |
 
 ## Storage
 
@@ -62,6 +70,11 @@
 - `blockedImages`: origin plus path of pictures hidden by hand, at most 1000.
 - `visionRatings`: `{ ai: [{key, e}], real: [...] }`, where `e` is the 512-number embedding. At most 500 of each kind.
 - `visionModel`: the classifier retrained from those ratings. If it's missing, `vision-weights.json` is used.
+- `shareRatings`: whether you're sharing ratings. It's per install, so it's not in `SLOP_DEFAULTS`, and it's off unless it's exactly `true`.
+- `voteSecret`: 64 hex digits, made the first time a vote is sent. Never in sync, and it's never rotated.
+- `voteQueue`: votes waiting to send, `{phash, label, source, vector, after, n}`, at most 500. `vector` is about 700 bytes of base64, `after` is when it's due, and `n` changes when an entry is replaced.
+- `voteSent`: hashes this install has sent, at most 5,000, so a near copy replaces its vote.
+- `voteRefused`: batches refused in a row. At 3, sending stops.
 
 **Cache Storage `hidetheslop-model`** holds the CLIP model file, downloaded from our R2 copy at `models.hidetheslop.com`, or a pinned Hugging Face revision if that fails, and checked against its SHA-256 hash (`vision.js`).
 
@@ -80,7 +93,7 @@
 
 ## The API
 
-`api/` is a small server that pools ratings between people: Fastify, Drizzle and Postgres, behind Caddy and Cloudflare on one droplet. **The extension doesn't call it yet**, so everything above still runs entirely on your computer. The design, the privacy rules and what the extension will need are in [CROWD-API.md](CROWD-API.md).
+`api/` is a small server that pools ratings between people: Fastify, Drizzle and Postgres, behind Caddy and Cloudflare on one droplet. The extension only calls it when you've turned on sharing. The design, the privacy rules and what the extension does are in [CROWD-API.md](CROWD-API.md).
 
 | File | Job |
 |---|---|

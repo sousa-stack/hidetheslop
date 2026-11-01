@@ -16,6 +16,8 @@ The example pictures are in `../test-images/ai` and `../test-images/real`. They'
 | `score.mjs <image>…` | Scores image files with the shipped weights, to check why something was or wasn't hidden. |
 | `browser-check.mjs` | Writes `browser-check.json`, the expected score for every example, for `test-vision.html`. |
 | `test-vision.html` | Runs the extension's real background code and model in a browser; see `../docs/TESTING.md`. |
+| `quantize.mjs` | Picks the scale for the int8 vectors sent to `/v1/embeddings`, by rerunning leave-one-out on the shipped embeddings at each scale. Results are in `../docs/CROWD-API.md`. |
+| `vote-check.mjs` | Runs the real extension in throwaway headless Chrome and Firefox against a local server, and prints what a vote really sends. See `../docs/TESTING.md`. |
 | `sheet.mjs out.jpg <dir> <prefix>…` | A labelled thumbnail grid of chosen images, for eyeballing mistakes. |
 | `compare.mjs` | The original comparison of three ready-made detectors, kept as a record. Their models were deleted; the comment at the top says how to get them back. |
 

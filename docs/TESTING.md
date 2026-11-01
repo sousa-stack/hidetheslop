@@ -5,7 +5,7 @@ Run the quick checks after every change, and the real-browser checks after anyth
 ## Quick checks (seconds)
 
 ```bash
-cd extension && node build.mjs && node --test test/meta.test.mjs test/download.test.mjs test/phash.test.mjs
+cd extension && node build.mjs && node --test test/meta.test.mjs test/download.test.mjs test/phash.test.mjs test/votes.test.mjs
 for f in src/*.js; do node --check "$f"; done
 ```
 
@@ -96,7 +96,11 @@ Open `http://localhost:8767/extension/test/harness.html` and read each post's `d
 - **Hidden:** label, hashtag, metadata, visual, keyword, fbpost, reel, late.
 - **Visible:** sponsored (the setting is off), normal, fbnormal.
 
-`window.learned` records rating messages.
+`window.learned` records rating messages as `[label, file, source]`. **AI, hide it** and **Not AI** must say `rated`, and the hover button `hid`. The hover button's shadow root is closed, so it needs a real mouse. A post hidden for its label or tags gets no **was this AI?** question.
+
+## The vote client: `extension/test/votes.test.mjs`
+
+This runs the real `votes.js` with fake storage and a fake network, so nothing reaches the API. It covers the token against a vector worked out with Python's `hmac`, off meaning off, the queue, every reply, races, near copies, and that nothing but the agreed fields goes in a body. The last two tests read `api/src/` and the build, and fail if the schema or the manifest moves.
 
 ## Real model in a browser: `eval/test-vision.html`
 
@@ -104,6 +108,63 @@ This runs the real `background.js` and `vision.js` with the real model and stubb
 - **Scores** match the Mac: `flips: 0` is what counts. `maxDiff` can reach about 0.15, because the browser and the Mac resize pictures slightly differently, and scores in the middle of the range show that.
 - **Rating** a picture moves its score and switching the rating replaces it.
 - **Downloads:** each picture is fetched once for both checks, and zero times on hosts that strip metadata.
+- **The hash:** `hash.match` must be true: a rating queues the same hash `SlopHash` gives on `shapes.png`, a drawn picture. `sd-burger.png` is flat, so it has no hash, and its rating must still save with nothing queued.
+
+Firefox's `maxDiff` is larger, 0.27 on 2026-11-01. `flips: 0` still counts.
+
+## What a vote really sends: `eval/vote-check.mjs`
+
+This installs the real build in throwaway headless browsers and drives it against a local stand-in for the API, which checks each body against the strict schema. Run it after a build. It needs `eval/models/`, Playwright's Chrome for Testing in `~/Library/Caches/ms-playwright` (branded Chrome ignores `--load-extension`), and Firefox in `/Applications`. Neither touches your own profiles.
+
+```bash
+cd extension && node build.mjs && cd ../eval && node vote-check.mjs   # about a minute
+node vote-check.mjs firefox                                            # just one
+```
+
+It never reaches the live API, because each browser gets a copy of `dist/` pointed at this machine. Firefox's copy keeps the real hostname over plain http on a random port, with a test pref resolving it to `127.0.0.1`, so the strip rule that runs is the one that ships. It uses real clicks for the switch and **Send now**, and a test pref answers Firefox's consent prompt, so the prompt itself still needs a person.
+
+It prints a PASS or FAIL for: the first install, a rating with sharing off, the click-only consent in Firefox, a real rating through the offscreen or background path, **Send now**, the vote and embedding requests, turning off, and revoking consent. Then it prints each request as the server saw it, the hash of each drawn picture in each browser, which must match, and what a hash costs.
+
+Measured on 2026-11-01, on Chrome for Testing 156 and Firefox 159. A browser's own headers will change over time, so check these when something changes. Chrome:
+
+```
+Host, Connection, Content-Length, Pragma: no-cache, Cache-Control: no-cache, User-Agent,
+content-type: application/json, Accept: */*, Origin: chrome-extension://<id>,
+Sec-Fetch-Site: none, Sec-Fetch-Mode: cors, Sec-Fetch-Dest: empty, Accept-Encoding, Accept-Language
+```
+
+Firefox, with no `Origin`, because `origin-rules.json` removed it:
+
+```
+Host, User-Agent, Accept, Accept-Language, Accept-Encoding, content-type: application/json,
+Content-Length, Connection, Sec-Fetch-Dest: empty, Sec-Fetch-Mode: cors, Sec-Fetch-Site: same-origin,
+Priority: u=4, Pragma: no-cache, Cache-Control: no-cache
+```
+
+Without the rule, Firefox sends `Origin: moz-extension://<uuid>`, which is unique to the install. That's why the Firefox build won't send unless the ruleset is on. Neither browser sends `Cookie` or `Referer`.
+
+**Not covered here:** Firefox's real consent prompt, Firefox 140 to 158, https, and the live API. See "With Kevin" below.
+
+### What a hash costs
+
+The hash only runs for a rating being queued, and it reuses the picture from the HTTP cache: the file was downloaded once for the rating, with or without sharing. Medians of 5 runs, with extra memory as the peak of the browser's whole process tree over 5 runs, so treat that as rough.
+
+| Picture | Chrome, offscreen | Firefox, background |
+|---|---|---|
+| 1 MP, a feed picture | 12 ms, 20–30 MB | 11 ms, 20–30 MB |
+| 12 MP | 95 ms, 100–160 MB | 85 ms, 120–150 MB |
+| 36 MP | 277 ms, 300–350 MB | 240 ms, about 500 MB |
+
+Measured on one rating of a 1.2 MP picture, sharing added 32–36 ms on Chrome and 36–45 ms on Firefox, and the file wasn't downloaded a second time.
+
+### With Kevin
+
+These can't run without a person or the live server. The policy has to be live first, so nothing sends before it says what's sent.
+
+- Load the build in Chrome and Firefox on both laptops, turn on sharing, answer Firefox's prompt, rate a picture, press **Send now**, and confirm it reaches the live API.
+- Check `about:addons` in Firefox shows the data permission, and that turning it off there turns sharing off.
+- Rate one real AI picture from 5 installs, and confirm the aggregate job publishes it in `/v1/verdicts` within an hour.
+- After real use, check Firefox's memory with `about:processes` or `about:memory`, not Activity Monitor, which hides compressed memory.
 
 ## The hash in real browsers: `eval/hash-check.html`
 
@@ -129,7 +190,7 @@ The check opens in its own tab and says Done after about a minute. Remove the ex
 
 ## Settings page: `extension/test/options-preview.html`
 
-This shows the real `options.html` with faked APIs and sample data, and always loads fresh CSS and JS. Add `?empty` to see a fresh install. Add `?page=welcome` or `?page=popup` for those pages. For the popup, `&unreached` shows a tab that needs a reload and `&blocked` shows a browser page. The model download is always faked here, and adding `&empty&fail` makes it fail. Use it for any design work, and check phone width with both pages. The website is in `site/`: run `node build.mjs` there and open `site/dist/index.html` from the same server. Hovering in a hidden in-app browser pane is unreliable, so check the welcome page's hover demo with the pane showing. Kevin reviews design changes there in the in-app browser pane. These pages ignore dark mode on purpose.
+This shows the real `options.html` with faked APIs and sample data, and always loads fresh CSS and JS. Add `?empty` to see a fresh install. Add `?page=welcome` or `?page=popup` for those pages. For sharing, `?share` turns it on with 7 ratings waiting, `&stuck` is a server that keeps refusing them, `&nosend` is one that can't be reached, and `?firefox&refuse` is Firefox saying no when you click the switch. For the popup, `&unreached` shows a tab that needs a reload and `&blocked` shows a browser page. The model download is always faked here, and adding `&empty&fail` makes it fail. Use it for any design work, and check phone width with both pages. The website is in `site/`: run `node build.mjs` there and open `site/dist/index.html` from the same server. Hovering in a hidden in-app browser pane is unreliable, so check the welcome page's hover demo with the pane showing. Kevin reviews design changes there in the in-app browser pane. These pages ignore dark mode on purpose.
 
 ## The installed extension in Kevin's real Chrome
 

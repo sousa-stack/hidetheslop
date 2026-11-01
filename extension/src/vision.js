@@ -132,5 +132,21 @@ var SlopVision = (() => {
     return { meta, embedding: Array.from(v, (x) => x / norm) };
   }
 
-  return { inspect, download, isDownloaded, remove, MODEL_BYTES };
+  // The perceptual hash a shared rating needs, or null. It's a second look at a picture
+  // you just rated, so only do this when a vote is about to be queued: it decodes at
+  // full size. The options and welcome pages load this file without phash.js.
+  async function hash(url) {
+    if (typeof SlopHash === 'undefined') return null;
+    try {
+      const res = await fetch(url, { credentials: 'omit', cache: 'force-cache', signal: AbortSignal.timeout(15000) });
+      if (!res.ok) return null;
+      const blob = await res.blob();
+      if (blob.size > MAX_IMAGE_BYTES || /^(text\/|application\/json)/.test(blob.type)) return null;
+      return (await SlopHash.fromBlob(blob)).phash;
+    } catch {
+      return null;
+    }
+  }
+
+  return { inspect, hash, download, isDownloaded, remove, MODEL_BYTES };
 })();

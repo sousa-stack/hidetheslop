@@ -4,11 +4,14 @@ const $ = (id) => document.getElementById(id);
 const lines = (text) => [...new Set(text.split('\n').map((l) => l.trim()).filter(Boolean))];
 
 let savedTimer = 0;
-async function save(patch) {
-  await api.storage.sync.set(patch);
+function saved() {
   $('saved').textContent = 'Saved';
   clearTimeout(savedTimer);
   savedTimer = setTimeout(() => ($('saved').textContent = ''), 1200);
+}
+async function save(patch) {
+  await api.storage.sync.set(patch);
+  saved();
 }
 
 async function checkPermission() {
@@ -101,13 +104,64 @@ async function checkPermission() {
     setTimeout(() => URL.revokeObjectURL(a.href), 10000);
   });
   $('forgetRatings').addEventListener('click', async () => {
-    if (!window.confirm('Forget all your ratings and go back to the shipped classifier?')) return;
+    const sentNote = share.checked ? " Ratings you've already shared can't be taken back." : '';
+    if (!window.confirm(`Forget all your ratings and go back to the shipped classifier?${sentNote}`)) return;
     await api.storage.local.remove(['visionRatings', 'visionModel']);
+    await api.runtime.sendMessage({ type: 'voteClear' }).catch(() => {});
+    showVotes();
   });
   api.storage.onChanged.addListener((changes, area) => {
     if (area === 'local' && changes.visionRatings) showRatings();
   });
   showRatings();
+
+  // Sharing lives in storage.local, per install, so it has no data-key. The queue belongs
+  // to the background, so the count and Send now go through messages.
+  const share = $('shareRatings');
+  async function showVotes(reply) {
+    const votes = reply || (await api.runtime.sendMessage({ type: 'voteState' }).catch(() => null));
+    const waiting = votes ? votes.waiting : 0;
+    $('votes').hidden = !share.checked;
+    $('voteCount').textContent = waiting ? `${waiting} ${waiting === 1 ? 'rating' : 'ratings'} waiting to send.` : 'Nothing waiting to send.';
+    $('sendNow').hidden = !waiting;
+    if (votes && share.checked) $('shareStatus').textContent = votes.stuck ? "Couldn't send, try updating the extension." : '';
+  }
+  function showShare(on) {
+    share.checked = on;
+    showWording(share);
+    showVotes();
+  }
+  // On click, not change, and before any await: Firefox only asks from inside a click.
+  share.addEventListener('click', () => {
+    $('shareStatus').textContent = '';
+    if (!share.checked) {
+      api.storage.local.set({ shareRatings: false }).then(saved);
+      return showShare(false);
+    }
+    slopAskToShare().then(async (yes) => {
+      if (yes) {
+        await api.storage.local.set({ shareRatings: true });
+        saved();
+      } else {
+        $('shareStatus').textContent = 'Firefox needs your OK to share, so this stayed off.';
+      }
+      showShare(yes);
+    });
+  });
+  $('sendNow').addEventListener('click', async () => {
+    const before = Number.parseInt($('voteCount').textContent, 10) || 0;
+    $('sendNow').disabled = true;
+    const reply = await api.runtime.sendMessage({ type: 'voteSend' }).catch(() => null);
+    $('sendNow').disabled = false;
+    await showVotes(reply);
+    if (reply && reply.waiting >= before) $('voteCount').textContent = `Couldn't send those yet, so they'll try again later. ${before} waiting.`;
+  });
+  api.storage.onChanged.addListener((changes, area) => {
+    if (area !== 'local') return;
+    if (changes.shareRatings) showShare(changes.shareRatings.newValue === true);
+    else if (changes.voteQueue) showVotes();
+  });
+  showShare(await slopGetShare());
 
   const cutoff = $('visualCutoff');
   const showCutoff = () => ($('cutoffOut').textContent = `${cutoff.value}%`);

@@ -4,14 +4,14 @@
 import { cpSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
-const version = '1.7.3';
+const version = '1.8.0';
 
 const base = {
   manifest_version: 3,
   name: 'Hide the Slop',
   version,
   description: 'Hides AI-generated images, posts and ads: site AI labels, AI hashtags, and AI metadata inside images.',
-  permissions: ['storage', 'contextMenus'],
+  permissions: ['storage', 'contextMenus', 'alarms'],
   host_permissions: ['http://*/*', 'https://*/*'],
   content_scripts: [
     {
@@ -41,13 +41,20 @@ const targets = {
   },
   firefox: {
     ...base,
-    background: { scripts: ['common.js', 'meta.js', 'train.js', 'ort/ort.wasm.min.js', 'vision.js', 'background.js'] },
+    // Firefox puts the install's own random address in the Origin of a POST, which would
+    // be a voter ID on every vote. origin-rules.json takes it off, for the API only.
+    permissions: [...base.permissions, 'declarativeNetRequestWithHostAccess'],
+    declarative_net_request: { rule_resources: [{ id: 'strip-origin', enabled: true, path: 'origin-rules.json' }] },
+    background: {
+      scripts: ['common.js', 'meta.js', 'train.js', 'votes.js', 'ort/ort.wasm.min.js', 'phash.js', 'vision.js', 'background.js'],
+    },
     browser_specific_settings: {
       gecko: {
         id: 'hidetheslop@hidetheslop.com',
-        strict_min_version: '128.0',
-        data_collection_permissions: { required: ['none'] },
+        strict_min_version: '140.0', // Mozilla's built-in consent doesn't exist below these
+        data_collection_permissions: { required: ['none'], optional: ['websiteContent'] },
       },
+      gecko_android: { strict_min_version: '142.0' },
     },
   },
 };

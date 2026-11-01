@@ -32,9 +32,13 @@ textarea:focus-visible { outline: 2px solid var(--red); outline-offset: 1px; }
 .stats .label { display: block; margin-bottom: 4px; font: 700 18px/1 var(--display); font-stretch: condensed; letter-spacing: .08em; text-transform: uppercase; }
 .stats button.link { margin-right: 10px; font-size: 14px; }
 
+.votes { margin: 0; padding: 0 0 14px; color: var(--ink); font-size: 15px; }
+.votes button.link { margin-left: 6px; font-size: 14px; }
+
 details { padding: 12px 0 4px; border-top: 1px solid var(--rule); }
 summary { color: var(--red); cursor: pointer; font-size: 15px; font-weight: 600; }
 details p { margin: 10px 0 0; color: var(--muted); font-size: 15px; line-height: 1.55; }
+details a { color: var(--red); font-weight: 600; }
 
 .saved { position: fixed; right: 16px; bottom: 16px; margin: 0; padding: 6px 12px; border-radius: 4px; background: var(--ink); color: var(--paper); font-size: 14px; font-weight: 600; }
 .saved:empty { display: none; }

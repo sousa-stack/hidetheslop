@@ -24,7 +24,7 @@
       <h2>Pictures</h2>
       <div class="copy">
         <p class="rule off" id="pictureRule">Show AI pictures nobody labeled</p>
-        <p class="lead">Most AI pictures have no label, so use your own robot to hide the clankers. It's a small AI that runs on your computer and guesses which pictures are AI-made. It only looks: it never makes anything, and nothing is uploaded.</p>
+        <p class="lead">Most AI pictures have no label, so use your own robot to hide the clankers. It's a small AI that runs on your computer and guesses which pictures are AI-made. It only looks: it never makes anything, and nothing is uploaded unless you turn on sharing.</p>
         <p>Your robot is a one-time 89 MB download. It makes mistakes, so everything it hides keeps a Show button, and you can teach it what it got wrong.</p>
         <div id="offer" class="choices">
           <button id="turnOn" class="primary">Turn it on</button>
@@ -85,6 +85,18 @@
           </div>
         </div>
         <p>On a real page this keeps that picture hidden, and teaches your robot if it's on. Right-click → <i>Hide this as AI slop</i> does the same thing.</p>
+      </div>
+    </section>
+
+    <section class="line">
+      <h2>Share</h2>
+      <div class="copy">
+        <label class="toggle">
+          <span class="rule" data-on="Share your ratings" data-off="Keep your ratings to yourself"></span>
+          <input type="checkbox" class="switch-input" role="switch" id="shareRatings">
+        </label>
+        <p>Your ratings can help hide slop for other people. This sends a fingerprint of each picture you rate and your answer, never the picture, its web address or anything about you. It's off until you turn it on.</p>
+        <p id="shareStatus" class="result" aria-live="polite"></p>
       </div>
     </section>
 

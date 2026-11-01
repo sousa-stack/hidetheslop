@@ -1,14 +1,20 @@
 # Changelog
 
-## Unreleased
-Nothing changes for people using the extension yet.
-- `api/`: a server for pooling ratings without personal data or browsing history. The extension doesn't call it yet. See `docs/CROWD-API.md`.
+## 1.8.0
+- You can share your ratings with other people, in Settings or on the welcome page. It's off until you turn it on, on each browser separately. A rating you make while it's on sends a hash of the picture, your answer and a per-picture code, hours later and at most 5 at a time. The picture, its address and anything about you are never sent. Ratings from before you turned it on stay on your computer. See the privacy policy.
+- Settings shows how many ratings are waiting, with a **Send now** link. Turning sharing off clears them, and so does forgetting your ratings.
+- Firefox 140 or newer is now required, and 142 on Android, because sharing uses Firefox's own consent, which older versions don't have. Firefox asks you when you turn sharing on.
+- The extension can now wake once an hour to send what's due, which needs the `alarms` permission. On Firefox it also has a rule that takes the extension's own address off requests to the API, because that address is unique to your install.
+- The privacy policy, README and in-page copy say what's sent.
+
+None of the rest shows up in the extension:
+- `api/`: a server for pooling ratings without personal data or browsing history. See `docs/CROWD-API.md`.
 - Docker, Caddy, deploy and hardening files for one droplet behind Cloudflare, none of it live yet.
 - `scripts/local-stack.sh` runs the real production stack on a Mac and proves it through Caddy, including the real `deploy.sh` and `backup.sh` in a throwaway copy.
 - `backup.sh` can put an encrypted copy of each dump in a private bucket, and mixes rows up first so a dump doesn't keep batches of votes together. `restore.sh` loads the newest dump into a new database, and moves `verdict_seq` forward so clients' cursors keep working.
 - `deploy.sh` now validates a changed `Caddyfile` and restarts Caddy to apply it. Before, a deploy left the old config running.
 - `CONFIRM_MIN_VOTES` can be lowered for testing, and the API warns at startup when it isn't 5. Expiry stays at the promised 5 votes.
-- `extension/src/phash.js`: the exact perceptual hash for pooled ratings, checked in real browsers. The extension doesn't call it yet, and a few reposts still land 4 bits apart. See `docs/CROWD-API.md`.
+- `extension/src/phash.js`: the exact perceptual hash for pooled ratings, checked in real browsers. A few reposts still land 4 bits apart. See `docs/CROWD-API.md`.
 
 ## 1.7.3
 - Retrained on 224 unique pictures: 93 AI and 131 real. Overall accuracy is about the same: 83 of 93 AI caught and 8 of 131 real wrongly flagged, on a set with more hard pictures.

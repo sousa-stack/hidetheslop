@@ -23,7 +23,7 @@
     <section class="line">
       <h2>Pictures</h2>
       <div class="controls">
-        <label class="row"><span><b></b><small>Your own small AI spots the pictures nobody labeled. It runs on your computer, and nothing is uploaded.</small><small id="visualStatus" class="status"></small></span>
+        <label class="row"><span><b></b><small>Your own small AI spots the pictures nobody labeled. It runs on your computer, and nothing is uploaded unless you turn on sharing.</small><small id="visualStatus" class="status"></small></span>
           <input type="checkbox" class="switch-input" id="visualCheck" role="switch" data-on="Hide AI pictures nobody labeled" data-off="Show AI pictures nobody labeled"></label>
         <div class="row slider">
           <span><b>How sure before hiding</b><small>Lower catches more slop, and more real pictures by mistake.</small></span>
@@ -42,11 +42,16 @@
             <button id="forgetRatings" class="link" hidden>Forget them</button>
           </div>
         </div>
+        <label class="row"><span><b></b><small>Your ratings can help hide slop for other people. When this is on, each picture you rate sends a fingerprint of it and your answer, hours later and a few at a time. The picture, its web address and anything about you stay here. Your robot has to be on for you to rate.</small><small id="shareStatus" class="status"></small></span>
+          <input type="checkbox" class="switch-input" id="shareRatings" role="switch" data-on="Share your ratings" data-off="Keep your ratings to yourself"></label>
+        <p id="votes" class="votes" hidden><span id="voteCount"></span> <button id="sendNow" class="link" hidden>Send now</button></p>
         <details>
           <summary>How it works</summary>
           <p>Your robot is a small AI model, a one-time 89 MB download. It only looks at pictures and never makes any. Every picture and video you scroll past gets a score for how AI-made it looks, and anything above your cutoff is hidden behind a Show bar. Videos always need at least 90%.</p>
           <p>It makes mistakes, so teach it: click <i>Show</i> on something it hid and answer <i>AI, hide it</i> or <i>Not AI</i>. Hiding something it missed, with the <i>Hide slop</i> button or a right-click, counts as an AI rating. Each rating retrains it on your computer.</p>
           <p><i>Save to a file</i> exports your ratings as numbers that describe each picture, not the pictures themselves.</p>
+          <p><i>Share your ratings</i> sends only ratings you make while it's on. Each one is a fingerprint of the picture, your answer, whether you rated it or hid it, and a code that lets you change your answer without adding a second vote. If 3 or more installs rated the same picture, the numbers that describe it can go too. Nothing is sent for pictures you only scroll past, or for private windows.</p>
+          <p>Turning it off stops sending and clears what's waiting. Ratings already sent can't be taken back, because nothing ties them to you. Your internet address is seen on the way, as with any request, and isn't kept. The <a href="https://hidetheslop.com/privacy" target="_blank" rel="noopener noreferrer">privacy policy</a> has the details.</p>
         </details>
       </div>
     </section>
@@ -67,7 +72,7 @@
         <details>
           <summary>How it works</summary>
           <p>Labels are checked on Facebook, Instagram, Threads, TikTok, YouTube and Pinterest. Tags are checked on those plus X, Reddit and LinkedIn.</p>
-          <p>The notes in picture files are standard AI tags, plus the settings Midjourney, DALL·E, ChatGPT, Firefly, Stable Diffusion and ComfyUI leave behind. Facebook and Instagram remove them on upload, but restaurant sites, ad networks and image hosts often don't. Pictures are read again from wherever the page got them, and nothing is sent anywhere else.</p>
+          <p>The notes in picture files are standard AI tags, plus the settings Midjourney, DALL·E, ChatGPT, Firefly, Stable Diffusion and ComfyUI leave behind. Facebook and Instagram remove them on upload, but restaurant sites, ad networks and image hosts often don't. Pictures are read again from wherever the page got them, and nothing is sent anywhere else unless you turn on sharing.</p>
         </details>
       </div>
     </section>

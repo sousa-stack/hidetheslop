@@ -1,6 +1,6 @@
 # Crowd votes and the API
 
-This is the design for sharing ratings between people. `api/` is the server. The extension doesn't talk to it yet: that's the next phase, and until it ships, the README's "nothing is sent to any other server" stays true. Kevin wants this tested on the droplet with real data before the extension goes to any store.
+This is the design for sharing ratings between people. `api/` is the server, and `extension/src/votes.js` is the client, from 1.8.0. It's off until you turn it on. Kevin wants this tested on the droplet with real data before the extension goes public in any store.
 
 The order of work is in [ROADMAP.md](ROADMAP.md). The build plan for the first version is in [plans/2026-10-30-local-api.md](plans/2026-10-30-local-api.md).
 
@@ -20,6 +20,8 @@ What we can't claim is zero data:
 - A rated picture's hash is stored.
 - It's 3 installs rather than 3 people: someone with two browsers counts twice.
 - The extension trusts the server when it asks for an embedding. The open source server is what backs that up.
+- A browser sends its usual `User-Agent` and `Accept-Language` on every request. The API doesn't store them.
+- The rule against one install casting several votes on near copies lives in the client (below), so it covers honest use, not a hostile client.
 - Someone with direct access to the live database can tell which votes arrived in the same request, because Postgres records each row's transaction (`xmin`) and new rows sit in physical order. That groups a batch without saying who sent it. `pg_dump` drops `xmin`, but it writes rows in physical order, so `backup.sh` first runs `CLUSTER` on each table, on its random id. A dump then doesn't keep batches together, apart from rows that arrive between that step and the dump. If `CLUSTER` fails the dump still happens, in arrival order, and the run reports a failure. `CLUSTER` keeps `xmin`, so none of this helps on the live database, and droplet backups are disk images, which keep `xmin` and the order. The extension should keep batches small to limit this.
 
 The privacy policy has to say the parts that matter to people, plainly.
@@ -44,11 +46,13 @@ The extension makes a random secret once and keeps it in `storage.local`, never 
 token = first 16 bytes of HMAC-SHA-256(secret, "hts-vote-v1:" + hashVersion + ":" + phash)
 ```
 
-Rating the same picture again gives the same token, so the vote is replaced. Tokens for different pictures look unrelated.
+Rating the same picture again gives the same token, so the vote is replaced. Tokens for different pictures look unrelated. Turning sharing off and forgetting your ratings both leave the secret alone, because a new secret would turn a re-rating into a second vote.
+
+**Near copies.** `vote_count` counts tokens across merged hashes, so one install rating copies 1 to 3 bits apart would cast several votes, and could confirm a picture alone. The extension keeps a list of the hashes it has sent (`voteSent`, at most 5,000), and when a new hash is within 3 bits of one of them or of one waiting in the queue, it votes on the earlier hash with the earlier token, which replaces that vote. The server can't check this, so it covers honest use, not a hostile client.
 
 ## The perceptual hash (`hashVersion` 1)
 
-The server treats a hash as 64 opaque bits. The extension computes it in `extension/src/phash.js`, which nothing calls yet. Browsers scale pictures differently, so they only decode, and every later step is the extension's own arithmetic. Changing any step once votes exist means a new `hashVersion` and splitting the data.
+The server treats a hash as 64 opaque bits. The extension computes it in `extension/src/phash.js`, only at rating time and only with sharing on. Browsers scale pictures differently, so they only decode, and every later step is the extension's own arithmetic. Changing any step once votes exist means a new `hashVersion` and splitting the data.
 
 1. Decode with `createImageBitmap(blob, {imageOrientation: 'from-image', premultiplyAlpha: 'none', colorSpaceConversion: 'default'})` at natural size, so EXIF orientation is applied.
 2. Draw it 1:1 onto a white `OffscreenCanvas` from `getContext('2d', {colorSpace: 'srgb', willReadFrequently: true})`, so transparency lands on white. Read it with `getImageData` in strips of about 1 megapixel, and never let the browser scale it.
@@ -102,7 +106,7 @@ The 5 votes needed to confirm can be changed for a small test, without changing 
 |---|---|
 | `GET /health` | `200 {status:'ok'}`, or `503` if the database can't be reached |
 | `POST /v1/votes` | Up to 50 votes. `{hashVersion, votes: [{phash, token, label, source}]}` → `202 {accepted, needEmbedding: [phash]}` |
-| `POST /v1/embeddings` | `{hashVersion, modelVersion, items: [{phash, token, vector}]}` → `202 {accepted}`. Stored only when that token voted on that hash, that exact hash has 3 or more votes, and the picture has no embedding yet. `vector` is 512 int8 values in base64, and the scale gets settled with the eval before votes ship. |
+| `POST /v1/embeddings` | `{hashVersion, modelVersion, items: [{phash, token, vector}]}` → `202 {accepted}`. Stored only when that token voted on that hash, that exact hash has 3 or more votes, and the picture has no embedding yet. `vector` is 512 int8 values in base64, at scale 127 (below). |
 | `GET /v1/verdicts?since=<seq>&hashVersion=1` | `{seq, add: [phash], remove: [phash], more}`, up to 10,000 entries. Call again with the returned `seq` while `more` is true. Cached for an hour. |
 
 Votes and embeddings are limited to 60 requests an hour per client, each with its own count, and verdicts to 120 a minute. `/health` has no limit.
@@ -111,16 +115,33 @@ Errors are `{error: <short code>}` and never repeat the input. A batch with two 
 
 `needEmbedding` lists hashes from this request that have 3 or more votes on that exact hash, and no embedding in the picture yet. Voters who rate later supply the embedding, so nobody has to be contacted again. Counting the exact hash means one person rating near-identical copies can't open the gate. A forged embedding can't be detected on the way in, so Kevin checks them, and removes duplicates, when retraining offline.
 
-## What the extension needs to do (next phase)
+## The embedding scale
 
-- Add the hash to `SlopVision.inspect()`, so it comes from the same single download.
-- Add `shareRatings` to `SLOP_DEFAULTS`, off by default, with a control in `options.html`. Explain it in plain words where it's turned on.
-- Queue votes in `storage.local` and send them in batches from the background, so the timing doesn't follow your browsing. If the server is down or busy, fail quietly and retry later. It must never affect hiding.
-- `learn()` knows the rating; `showAndAsk` is `source: 'rated'`, and the **Hide slop** button and right-click are `source: 'hid'`.
-- Never send the rating's `key`, which contains the image URL. Skip `data:` video frames, because the hash changes with the frame.
-- Firefox: change `data_collection_permissions` to declare the optional collection, probably `websiteContent`, and request it at runtime. Check Mozilla's docs and the policy dated December 1, 2026 first.
-- Update the README's privacy section, the privacy policy and the store listings in the same release.
-- Only people with the picture check on can rate today, because `learn()` needs the embedding. Verdicts for people without the model would mean downloading Facebook pictures again, which 1.5 stopped doing, so that comes later.
+`vector` is each of the 512 numbers times **127**, rounded, and clamped to ±127. To use one, divide by the scale and normalize to unit length again. A unit vector can't reach the clamp at this scale.
+
+Measured on 2026-11-01 with `eval/quantize.mjs`: leave-one-out on the 224 shipped embeddings at a 70% cutoff, against the full numbers (AUC 0.9771, 83 of 93 caught, 8 of 131 wrongly flagged). The values go up to 0.73, and are typically about 0.02.
+
+| Scale | AUC | Caught | Wrong | Scores flipped | Mean change | Worst change | Clamped | Lowest cosine |
+|---|---|---|---|---|---|---|---|---|
+| **127** | 0.9773 | 82 | 8 | 1 | 0.0049 | 0.069 | 0 of 114,688 | 0.99855 |
+| 256 | 0.9764 | 82 | 8 | 1 | 0.0070 | 0.102 | 96 | 0.98142 |
+| 512 | 0.9797 | 82 | 8 | 3 | 0.0168 | 0.189 | 212 | 0.89059 |
+
+The AUC differences are noise. A bigger scale keeps more detail in the small values, but it clamps the one large value most of these vectors have, which costs more than that gains.
+
+## What the extension does
+
+- **What's sent.** Only with `shareRatings` on, and only for a rating made while it was on: `POST /v1/votes`, and `POST /v1/embeddings` for hashes the server named in `needEmbedding`, one try each. Requests use `credentials: 'omit'`, `referrerPolicy: 'no-referrer'`, `redirect: 'error'`, a 15-second timeout, and no headers of its own beyond `content-type`, which the API needs to parse the body.
+- **When.** A vote waits in `voteQueue` for a random 1 to 6 hours. An hourly alarm sends up to 5 that are due, shuffled. **Send now** in Settings ignores the wait, but not the 5. Rating a picture again replaces its waiting entry.
+- **The hash.** `SlopVision.hash(url)` fetches the picture again from the HTTP cache, in the offscreen document on Chrome and the background page on Firefox. It only runs for a rating that's about to be queued, because it decodes at full size. Verdict matching (step 5) still has to decide how it gets hashes.
+- **Skipped:** video frames, because the hash changes with the frame; private windows; and a rating whose picture has no hash. The rating itself still saves.
+- **Replies.** `202` counts only if it parses as `{accepted, needEmbedding: string[]}`. A hash in `needEmbedding` that wasn't in the batch is ignored. `400` and `413` split the batch and resend, and an item is dropped only when it's alone and the reply is a JSON `{error}`. After 3 batches in a row are refused, sending stops, nothing more is dropped, and Settings says "Couldn't send, try updating the extension". **Send now** still tries once, and an update or a good reply clears it. Anything else, including `3xx`, `401`, `403`, `404`, `408`, `429`, `5xx` and network errors, keeps everything for the next alarm.
+- **Off means off.** The sender rereads the setting before every fetch. Turning it off aborts what's in flight and clears the queue. Forgetting your ratings clears the queue too.
+- **The queue can't lose a race.** Every change to `voteQueue`, and creating `voteSecret`, goes through one promise chain, never held across the network. Entries carry a number that changes when they're replaced, so a `202` can't remove a re-rating made while it was in the air.
+- **Firefox.** The optional `websiteContent` collection in `data_collection_permissions` is requested from the click that turns sharing on. Revoking it turns sharing off and clears the queue, and the next start catches a revoke made while the background was asleep. Below Firefox 140, or 142 on Android, Mozilla's built-in consent doesn't exist, so those are now the minimum versions. The sender also checks site access for the API, which Firefox lets you withhold, because the API has no CORS.
+- **Firefox's per-install address.** Firefox puts `Origin: moz-extension://<uuid>` on an extension's POST, and that UUID is random per install, which would be a voter ID on every vote. `origin-rules.json` removes the header for `api.hidetheslop.com`, and the sender won't send on Firefox unless that ruleset is on. Chrome's `chrome-extension://<id>` is the same for everyone on a store build, so it stays. The exact headers each browser sends are in `docs/TESTING.md`.
+
+Only people with the picture check on can rate today, because `learn()` needs the embedding. Verdicts for people without the model would mean downloading Facebook pictures again, which 1.5 stopped doing, so that comes later.
 
 ## If it takes off
 

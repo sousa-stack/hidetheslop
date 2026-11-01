@@ -1,7 +1,8 @@
 // Chrome runs this as a service worker (needs importScripts); Firefox loads
-// common.js, meta.js, train.js and the image model files first via background.scripts.
+// common.js, meta.js, train.js, votes.js and the image model files first via
+// background.scripts.
 if (typeof importScripts === 'function' && typeof SlopMeta === 'undefined') {
-  importScripts('common.js', 'meta.js', 'train.js');
+  importScripts('common.js', 'meta.js', 'train.js', 'votes.js');
 }
 
 const api = SLOP_API;
@@ -106,6 +107,14 @@ const inspectUrl = cachedQueue(async (url) => {
   return api.runtime.sendMessage({ target: 'offscreen', type: 'inspect', url });
 }, 2, 500);
 
+// The hash a shared rating needs, from wherever the model runs. It decodes the picture
+// again at full size, so it only happens for a rating that's about to be queued.
+async function hashUrl(url) {
+  if (typeof SlopVision !== 'undefined') return SlopVision.hash(url);
+  await ensureOffscreen();
+  return api.runtime.sendMessage({ target: 'offscreen', type: 'hash', url });
+}
+
 // The classifier: retrained from your ratings if you've made any, else the shipped one.
 let classifier = null;
 async function currentClassifier() {
@@ -144,7 +153,9 @@ const MAX_RATINGS = 500; // per kind; oldest go first
 const RATING_WEIGHT = 3; // one of your ratings counts as much as three shipped examples
 
 let learning = Promise.resolve();
-function learn(url, label) {
+function learn(url, label, source, incognito) {
+  // Read now, not when this gets its turn: only a rating made while sharing is on counts.
+  const sharing = slopGetShare().catch(() => false);
   learning = learning.then(async () => {
     const inspected = await inspectUrl(url);
     if (!inspected) return false;
@@ -155,9 +166,19 @@ function learn(url, label) {
     visionRatings[label].push({ key, e: inspected.embedding.map((x) => +x.toFixed(5)) });
     visionRatings[label] = visionRatings[label].slice(-MAX_RATINGS);
     await api.storage.local.set({ visionRatings, visionModel: await retrain(visionRatings) });
+    // The rating is saved by now, so nothing here can lose it. Video frames are skipped
+    // because their hash changes with the frame.
+    if ((await sharing) && !incognito && /^https?:/.test(url) && (source === 'rated' || source === 'hid')) {
+      await queueVote(url, label, source, inspected.embedding).catch(() => {});
+    }
     return true;
   }).catch(() => false);
   return learning;
+}
+
+async function queueVote(url, label, source, embedding) {
+  const phash = await hashUrl(url);
+  if (phash) await SlopVotes.add({ phash, label, source, embedding });
 }
 
 async function retrain(ratings) {
@@ -220,7 +241,19 @@ api.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     return true;
   }
   if (msg.type === 'learn') {
-    learn(msg.url, msg.label).then(sendResponse);
+    learn(msg.url, msg.label, msg.source, !!sender.tab?.incognito).then(sendResponse);
+    return true;
+  }
+  if (msg.type === 'voteState') {
+    SlopVotes.state().then(sendResponse, () => sendResponse(null));
+    return true;
+  }
+  if (msg.type === 'voteSend') {
+    SlopVotes.run({ now: true }).then(() => SlopVotes.state()).then(sendResponse, () => sendResponse(null));
+    return true;
+  }
+  if (msg.type === 'voteClear') {
+    SlopVotes.clear().then(() => sendResponse(true), () => sendResponse(false));
     return true;
   }
   if (msg.type === 'stats' && sender.tab) {
@@ -264,6 +297,7 @@ api.runtime.onInstalled.addListener(async ({ reason }) => {
   // Ratings give you your own retrained classifier, which a new version's examples
   // wouldn't reach until your next rating.
   if (reason === 'update') {
+    SlopVotes.updated().catch(() => {});
     const { visionRatings } = await api.storage.local.get('visionRatings');
     if (visionRatings) {
       await retrain(visionRatings).then((visionModel) => api.storage.local.set({ visionModel })).catch(() => {});
@@ -274,3 +308,5 @@ api.runtime.onInstalled.addListener(async ({ reason }) => {
   if (!granted) api.runtime.openOptionsPage();
 });
 api.runtime.onStartup.addListener(createMenus);
+
+SlopVotes.start();

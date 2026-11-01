@@ -55,9 +55,10 @@ If Firefox didn't grant site access at install, the settings page opens with an 
 
 ## Privacy
 
-To check an image, the extension downloads that image again from the server the page already loaded it from, without cookies: once per picture, whole if the picture check is on, or just the first 512 KB for the metadata check alone. Hosts known to strip metadata (Facebook's and Instagram's) aren't downloaded just for that. Nothing is sent to any other server. The only other download is the model, from this project's copy on Cloudflare or from Hugging Face, when you turn the picture check on. There are no analytics. Settings sync through your browser account.
+To check an image, the extension downloads that image again from the server the page already loaded it from, without cookies: once per picture, whole if the picture check is on, or just the first 512 KB for the metadata check alone. Hosts known to strip metadata (Facebook's and Instagram's) aren't downloaded just for that. Nothing is sent to any other server unless you turn on sharing. The only other download is the model, from this project's copy on Cloudflare or from Hugging Face, when you turn the picture check on. There are no analytics. Settings sync through your browser account.
 
-Shared ratings are planned, and aren't in the extension yet. They'll be off until you turn them on, and will send only what you explicitly rate, as a hash and a vote. Nothing stored will identify you. Checking pictures will stay on your device, so no server learns what you look at. The design is in [docs/CROWD-API.md](docs/CROWD-API.md).
+**Sharing your ratings is optional, and off until you turn it on.** With it on, each rating you make goes to `api.hidetheslop.com`: a 64-bit hash of the picture, your answer, whether you rated it or hid it, and a per-picture code, 1 to 6 hours later and at most 5 at a time. If 3 or more installs rated that exact picture, the server can also ask for the numbers that describe it. The picture, its address, the page and any ID for you are never sent. The server and Cloudflare see your IP address in transit, and the server doesn't log it. Ratings already sent can't be taken back, because nothing ties them to you. The whole list is in the [privacy policy](https://hidetheslop.com/privacy) and [docs/CROWD-API.md](docs/CROWD-API.md).
+
 
 ## Develop
 

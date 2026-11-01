@@ -63,7 +63,7 @@ To load it: Chrome uses `chrome://extensions` → Developer mode → Load unpack
 
 ## Code conventions
 
-- Plain JavaScript, no build step, no dependencies in the extension. Shared code is a `var` global in its own file (`SLOP_API`, `SlopMeta`, `SlopTrain`, `SlopVision`), listed in the right order in the manifest or HTML.
+- Plain JavaScript, no build step, no dependencies in the extension. Shared code is a `var` global in its own file (`SLOP_API`, `SlopMeta`, `SlopTrain`, `SlopVision`, `SlopVotes`), listed in the right order in the manifest or HTML.
 - The same source runs in both browsers. Use `SLOP_API` (that's `browser`, or else `chrome`) and promise-style calls. For `onMessage` replies, call `sendResponse` and `return true`; don't return a promise.
 - Comments explain *why* in a sentence or two, in the voice of the existing code. Match the surrounding density.
 - Page UI we inject (bars, the hover button) lives in shadow DOM, so site CSS can't touch it. Never modify the page's own images.

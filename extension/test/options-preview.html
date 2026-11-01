@@ -3,7 +3,10 @@
      and some sample settings filled in. Serve the hidetheslop folder
      (python3 -m http.server 8767) and open /extension/test/options-preview.html
      Add ?empty for a fresh install. Add ?page=welcome or ?page=popup for those pages.
-     The model download is always faked; add &empty&fail to make it fail. -->
+     The model download is always faked; add &empty&fail to make it fail.
+     Add ?share to turn sharing on with ratings waiting, &stuck for a server that keeps
+     refusing them, &nosend for one that can't be reached, and &firefox&refuse for
+     Firefox saying no when you turn it on. -->
 <meta charset="utf-8">
 <script>
   (async () => {
@@ -12,11 +15,21 @@
     const stub = `<base href="../src/">
 <script>
   const empty = ${JSON.stringify(location.search.includes('empty'))};
+  const flag = (name) => new URLSearchParams(${JSON.stringify(location.search)}).has(name);
   const sync = empty ? {} : { keywords: ["Tony's Pizza Palace", '@slopfactory'], visualCheck: true, visualCutoff: 0.7 };
   const fakeE = () => [];
   const local = empty ? {} : {
     blockedImages: ['a', 'b', 'c'],
     visionRatings: { ai: Array.from({ length: 12 }, () => ({ key: '', e: fakeE() })), real: Array.from({ length: 5 }, () => ({ key: '', e: fakeE() })) },
+  };
+  if (flag('share')) local.shareRatings = true;
+  // Stands in for the queue in votes.js. Send now takes 5, like the real one.
+  const votes = { waiting: flag('share') ? 7 : 0, stuck: flag('stuck') };
+  const voteState = () => ({ on: local.shareRatings === true, ...votes });
+  const voteMessage = (msg) => {
+    if (msg.type === 'voteSend' && !flag('stuck') && !flag('nosend')) votes.waiting = Math.max(0, votes.waiting - 5);
+    if (msg.type === 'voteClear') votes.waiting = 0;
+    return voteState();
   };
   const listeners = [];
   const area = (name, store) => ({
@@ -35,12 +48,12 @@
   }
   window.chrome = {
     storage: { sync: area('sync', sync), local: area('local', local), onChanged: { addListener: (l) => listeners.push(l) } },
-    permissions: { contains: async () => true, request: async () => true },
+    permissions: { contains: async () => true, request: async () => !flag('refuse') },
     runtime: {
       getURL: (p) => p,
       openOptionsPage() {},
-      getManifest: () => ({ version: 'preview' }),
-      sendMessage: async () => (empty ? { count: 0, reasons: {} } : { count: 12, reasons: { 'AI hashtag': 7, 'AI label': 3, 'the picture check': 2 } }),
+      getManifest: () => ({ version: 'preview', ...(flag('firefox') ? { browser_specific_settings: { gecko: {} } } : {}) }),
+      sendMessage: async (msg) => /^vote/.test(msg.type) ? voteMessage(msg) : (empty ? { count: 0, reasons: {} } : { count: 12, reasons: { 'AI hashtag': 7, 'AI label': 3, 'the picture check': 2 } }),
     },
     // For the popup: add &unreached for a tab that needs a reload, &blocked for a browser page.
     tabs: {

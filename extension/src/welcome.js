@@ -35,6 +35,28 @@ function offerDone(text, on) {
     });
   }
 
+  // Unticked until you tick it. Same as the switch in Settings: on click, not change,
+  // and before any await, because Firefox only asks from inside a click.
+  const share = $('shareRatings');
+  const shareRule = share.closest('.toggle').querySelector('.rule');
+  const showShare = (on) => {
+    share.checked = on;
+    shareRule.textContent = on ? shareRule.dataset.on : shareRule.dataset.off;
+  };
+  showShare(await slopGetShare());
+  share.addEventListener('click', () => {
+    $('shareStatus').textContent = '';
+    if (!share.checked) {
+      api.storage.local.set({ shareRatings: false });
+      return showShare(false);
+    }
+    slopAskToShare().then(async (yes) => {
+      if (yes) await api.storage.local.set({ shareRatings: true });
+      else $('shareStatus').textContent = 'Firefox needs your OK to share, so this stayed off.';
+      showShare(yes);
+    });
+  });
+
   // Same as the switch in Settings: the setting only goes on once the model is here.
   if (settings.visualCheck && (await SlopVision.isDownloaded())) offerDone('The picture check is on.', true);
 

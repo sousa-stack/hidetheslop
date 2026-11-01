@@ -5,6 +5,8 @@
        2. rating a picture saves it, retrains, and moves its score
        3. a picture is downloaded once for both checks, and not at all just to read
           metadata on hosts that strip it
+       4. the hash a rating queues, through the real background path, matches SlopHash
+          run directly on that file
      Serve the "Hide the Slop" folder (python3 -m http.server 8767), open /eval/test-vision.html -->
 <meta charset="utf-8">
 <title>Vision check</title>
@@ -23,10 +25,12 @@
       onStartup: noop,
       sendMessage: async () => {},
       openOptionsPage() {},
+      getManifest: () => ({}),
     },
     storage: {
       local: {
         get: async (k) => (typeof k === 'string' ? { [k]: local[k] } : { ...local }),
+        remove: async (keys) => [].concat(keys).forEach((k) => delete local[k]),
         set: async (patch) => {
           Object.assign(local, patch);
           const changes = Object.fromEntries(Object.keys(patch).map((k) => [k, { newValue: patch[k] }]));
@@ -38,7 +42,8 @@
     tabs: { onUpdated: noop, onRemoved: noop, sendMessage: async () => {} },
     action: { setBadgeText: async () => {}, setBadgeBackgroundColor: async () => {} },
     contextMenus: { removeAll: async () => {}, create() {}, onClicked: noop },
-    permissions: { contains: async () => true },
+    permissions: { contains: async () => true, onRemoved: noop },
+    alarms: { get: async () => ({}), create() {}, onAlarm: noop },
   };
   // Count downloads per URL.
   const fetched = {};
@@ -54,7 +59,9 @@
 <script src="../extension/src/common.js"></script>
 <script src="../extension/src/meta.js"></script>
 <script src="../extension/src/train.js"></script>
+<script src="../extension/src/votes.js"></script>
 <script src="../extension/src/ort/ort.wasm.min.js"></script>
+<script src="../extension/src/phash.js"></script>
 <script src="../extension/src/vision.js"></script>
 <script src="../extension/src/background.js"></script>
 <script>
@@ -117,7 +124,36 @@
       strippingHostResult: strippedResult,
     };
 
-    window.result = { runtime: ort.env.versions?.web, scores, learning, downloads };
+    // 4. A rating queues the same hash SlopHash gives on the file. Sharing off queues
+    // nothing, and a picture with no hash still saves its rating. shapes.png is drawn, so
+    // this needs no real picture.
+    const shapes = new URL('../extension/test/fixtures/shapes.png', location.href).href;
+    const direct = await SlopHash.fromBlob(await (await fetch(shapes)).blob());
+    const noHash = await SlopHash.fromBlob(await (await fetch(sd)).blob());
+    delete local.voteQueue;
+    const offSaved = await send({ type: 'learn', url: shapes, label: 'ai', source: 'rated' });
+    const queuedWhileOff = (local.voteQueue || []).length;
+    local.shareRatings = true;
+    const noHashSaved = await send({ type: 'learn', url: sd, label: 'ai', source: 'hid' });
+    const queuedForNoHash = (local.voteQueue || []).length;
+    const onSaved = await send({ type: 'learn', url: shapes, label: 'ai', source: 'hid' });
+    const [entry] = local.voteQueue || [];
+    const hash = {
+      direct: direct.phash,
+      viaRating: entry && entry.phash,
+      match: !!direct.phash && entry?.phash === direct.phash,
+      sourceKept: entry?.source === 'hid',
+      vectorBytes: entry && atob(entry.vector).length,
+      fromSlopVision: (await SlopVision.hash(shapes)) === direct.phash,
+      savedWhileOff: offSaved,
+      queuedWhileOff,
+      fixtureWithNoHash: noHash.why,
+      savedWithNoHash: noHashSaved,
+      queuedForNoHash,
+      savedWhileOn: onSaved,
+    };
+
+    window.result = { runtime: ort.env.versions?.web, scores, learning, downloads, hash };
     out.textContent = JSON.stringify(window.result, null, 2);
   } catch (e) {
     window.result = { error: String((e && e.stack) || e) };
