@@ -17,6 +17,7 @@ None of the rest shows up in the extension:
 - `extension/src/phash.js`: the exact perceptual hash for pooled ratings, checked in real browsers. A few reposts still land 4 bits apart. See `docs/CROWD-API.md`.
 - Settings warns you when sharing is on and your robot is off, because **Hide slop** still hides the post but the rating can't count.
 - The right-click menu no longer tries to add its items twice when installing and startup land together.
+- A buy-me-a-coffee link with a drawn cup in the Settings footer, and the same on the website, instead of Buy Me a Coffee's widget, which would load their script on every visit.
 
 ## 1.7.3
 - Retrained on 224 unique pictures: 93 AI and 131 real. Overall accuracy is about the same: 83 of 93 AI caught and 8 of 131 real wrongly flagged, on a set with more hard pictures.

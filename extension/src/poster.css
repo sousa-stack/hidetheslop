@@ -47,6 +47,16 @@ h1 { margin: 0; font: 700 clamp(46px, 12.4vw, 112px)/.95 var(--display); font-st
 /* The signature at the foot of the page, like a printer's mark on a poster. */
 .after .credit { margin-top: 16px; font-size: 13px; font-style: italic; letter-spacing: .13em; text-align: center; text-transform: uppercase; }
 .credit a { color: var(--ink); text-decoration: none; }
+/* Drawn here rather than Buy Me a Coffee's own widget, which would load their script on
+   every visit, and an extension page can't run it anyway. */
+.coffee { margin: 4px 0 18px; text-align: center; }
+.coffee a { display: inline-flex; align-items: center; gap: 12px; color: var(--ink); font-size: 15px; text-align: left; text-decoration: none; }
+.coffee svg { flex: none; width: 40px; height: 40px; transform-origin: 50% 90%; transition: transform .2s ease-out; }
+.coffee .mug { fill: var(--amber); }
+.coffee b { color: var(--red); text-decoration: underline; }
+.coffee a:hover svg, .coffee a:focus-visible svg { transform: rotate(-8deg); }
+.coffee a:focus-visible { outline: 2px solid var(--red); outline-offset: 4px; }
+@media (prefers-reduced-motion: reduce) { .coffee svg { transition: none; } }
 .credit a:hover { color: var(--red); text-decoration: underline; }
 .credit a:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
 
