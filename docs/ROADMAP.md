@@ -12,10 +12,10 @@ Updated 2026-11-01. Start here.
 - [hidetheslop.com](https://hidetheslop.com) and its privacy policy, on Cloudflare Workers. The install buttons say "coming soon".
 - The model at `models.hidetheslop.com`, on Cloudflare R2, with Hugging Face as the fallback.
 - `hello@hidetheslop.com`, forwarding to Kevin's Gmail. Tested.
-- The API at `api.hidetheslop.com` and the status page at `status.hidetheslop.com`, on the droplet behind Cloudflare. Checked live: direct access is blocked, input rules and rate limits work, verdicts are cached, and no client IPs are in the logs. It holds no real votes yet.
+- The API at `api.hidetheslop.com` and the status page at `status.hidetheslop.com`, on the droplet behind Cloudflare. Checked live: direct access is blocked, input rules and rate limits work, verdicts are cached, and no client IPs are in the logs. It holds Kevin's first test votes.
 
 **Built, not live:**
-- The extension, version 1.8.0, with voting built and off by default. Not in any store, and no real vote has been sent yet.
+- The extension, version 1.8.0, with voting built and off by default. Not in any store. The first real votes reached the live API from Kevin's Chrome on 2026-11-01. Firefox's real consent prompt, and a picture reaching 5 votes, are still to test.
 - Deploys from GitHub, which stay off until the secrets are added.
 - The production stack, proven on this Mac by `scripts/local-stack.sh`: 30 checks through the real Compose file and a Caddyfile generated from the real one, including `deploy.sh` rollback and an encrypted backup and restore.
 - The perceptual hash, `extension/src/phash.js`. It isn't called by the extension yet.

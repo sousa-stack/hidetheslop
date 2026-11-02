@@ -15,6 +15,8 @@ None of the rest shows up in the extension:
 - `deploy.sh` now validates a changed `Caddyfile` and restarts Caddy to apply it. Before, a deploy left the old config running.
 - `CONFIRM_MIN_VOTES` can be lowered for testing, and the API warns at startup when it isn't 5. Expiry stays at the promised 5 votes.
 - `extension/src/phash.js`: the exact perceptual hash for pooled ratings, checked in real browsers. A few reposts still land 4 bits apart. See `docs/CROWD-API.md`.
+- Settings warns you when sharing is on and your robot is off, because **Hide slop** still hides the post but the rating can't count.
+- The right-click menu no longer tries to add its items twice when installing and startup land together.
 
 ## 1.7.3
 - Retrained on 224 unique pictures: 93 AI and 131 real. Overall accuracy is about the same: 83 of 93 AI caught and 8 of 131 real wrongly flagged, on a set with more hard pictures.

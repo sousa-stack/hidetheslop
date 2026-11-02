@@ -124,7 +124,11 @@ async function checkPermission() {
     $('votes').hidden = !share.checked;
     $('voteCount').textContent = waiting ? `${waiting} ${waiting === 1 ? 'rating' : 'ratings'} waiting to send.` : 'Nothing waiting to send.';
     $('sendNow').hidden = !waiting;
-    if (votes && share.checked) $('shareStatus').textContent = votes.stuck ? "Couldn't send, try updating the extension." : '';
+    if (!share.checked) return;
+    // Hide slop still hides the post with your robot off, so nothing else would tell you
+    // that the rating didn't count.
+    if (!vbox.checked) $('shareStatus').textContent = "Your robot is off, so your ratings can't count. Turn it on above.";
+    else if (votes) $('shareStatus').textContent = votes.stuck ? "Couldn't send, try updating the extension." : '';
   }
   function showShare(on) {
     share.checked = on;
@@ -157,6 +161,7 @@ async function checkPermission() {
     if (reply && reply.waiting >= before) $('voteCount').textContent = `Couldn't send those yet, so they'll try again later. ${before} waiting.`;
   });
   api.storage.onChanged.addListener((changes, area) => {
+    if (area === 'sync' && changes.visualCheck) showVotes();
     if (area !== 'local') return;
     if (changes.shareRatings) showShare(changes.shareRatings.newValue === true);
     else if (changes.voteQueue) showVotes();

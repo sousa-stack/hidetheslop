@@ -272,11 +272,14 @@ api.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 // ---- context menu ---------------------------------------------------------
 
+// Install and browser startup can both land here at once, and two runs at the same time
+// would add each item twice, so each one waits for the last.
+let menus = Promise.resolve();
 function createMenus() {
-  Promise.resolve(api.contextMenus.removeAll()).then(() => {
+  menus = menus.then(() => api.contextMenus.removeAll()).then(() => {
     api.contextMenus.create({ id: 'hide', title: 'Hide this as AI slop', contexts: ['all'] });
     api.contextMenus.create({ id: 'block', title: 'Always hide posts from this account…', contexts: ['all'] });
-  });
+  }).catch(() => {});
 }
 
 api.contextMenus.onClicked.addListener((info, tab) => {
