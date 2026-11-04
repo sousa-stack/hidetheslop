@@ -50,11 +50,12 @@ h1 { text-align: center; }
 .photo p { display: grid; gap: 2px; margin: 0; padding: 10px 12px; }
 .feed.clean .slop > div:not(.bar) { display: none; }
 .feed.clean .slop .bar { display: flex !important; }
-.bar { gap: 12px; align-items: center; padding: 8px 12px; border: 1px dashed rgba(127, 127, 127, .55); border-radius: 8px; background: rgba(127, 127, 127, .08); color: #6b6b6b; font: 13px/1.4 system-ui, sans-serif; }
+.bar { gap: 12px; align-items: center; padding: 7px 8px 7px 12px; border: 1px solid rgba(127, 127, 127, .4); border-radius: 8px; background: rgba(127, 127, 127, .08); color: #6b6b6b; font: 13px/1.4 system-ui, sans-serif; }
 .post .bar b { color: var(--red); font-size: 13px; font-weight: 600; }
 .post .bar span { font-size: 13px; }
 .bar span:nth-child(2) { flex: 1; }
-.bar .show { text-decoration: underline; }
+.bar .show { display: inline-flex; align-items: center; gap: 5px; padding: 5px 10px; border: 1px solid currentColor; border-radius: 6px; font-weight: 600; }
+.bar .show svg { width: 13px; height: 13px; }
 
 .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .stats strong { display: block; font: 700 64px/.95 var(--display); font-stretch: condensed; }

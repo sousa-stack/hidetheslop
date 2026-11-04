@@ -94,6 +94,16 @@ const rateMany = async (votes, n) => {
 };
 const flush = () => new Promise((r) => setTimeout(r, 5));
 
+// Signing the token uses crypto.subtle, which really is asynchronous, so a few ticks
+// aren't enough on a busy machine. Wait for the thing itself.
+async function until(check, ms = 2000) {
+  const end = Date.now() + ms;
+  while (!check()) {
+    if (Date.now() > end) throw new Error('timed out waiting');
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+}
+
 // The API's strict schema, field for field. The last test compares it with the source.
 function assertVoteBody(body) {
   assert.deepEqual(Object.keys(body).sort(), ['hashVersion', 'votes']);
@@ -193,7 +203,7 @@ test('turning it off clears the queue and aborts a send in flight, and keeps the
   };
   await rateMany(votes, 3);
   const sending = votes.run({ now: true });
-  await flush();
+  await until(() => signals.length === 1);
   const secret = local.voteSecret;
   assert.ok(secret);
   await ctx.chrome.storage.local.set({ shareRatings: false });
@@ -629,7 +639,7 @@ test('an alarm during Send now does not start a second send', async () => {
   const { votes, requests } = setup({ reply: () => new Promise((r) => (release = r)) });
   await rateMany(votes, 3);
   const first = votes.run({ now: true });
-  await flush();
+  await until(() => requests.length === 1);
   await votes.run({ now: true });
   assert.equal(requests.length, 1);
   release({ status: 202, json: { accepted: 3, needEmbedding: [] } });

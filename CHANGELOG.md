@@ -18,6 +18,9 @@ None of the rest shows up in the extension:
 - Settings warns you when sharing is on and your robot is off, because **Hide slop** still hides the post but the rating can't count.
 - The right-click menu no longer tries to add its items twice when installing and startup land together.
 - A buy-me-a-coffee link with a drawn cup in the Settings footer, and the same on the website, instead of Buy Me a Coffee's widget, which would load their script on every visit.
+- The bar on a hidden post has real buttons: red with a cross for AI, green with a tick for not AI, and an outlined Show. It notices a site's own dark mode, and the dashed border is now solid.
+- A picture or video blurred in place, outside any post, gets a Show button when you rest your mouse on it. Before, there was no way to see it again.
+- The hover button no longer appears on profile pictures. Facebook draws them as SVG, so it used to look straight past them to the cover photo.
 
 ## 1.7.3
 - Retrained on 224 unique pictures: 93 AI and 131 real. Overall accuracy is about the same: 83 of 93 AI caught and 8 of 131 real wrongly flagged, on a set with more hard pictures.

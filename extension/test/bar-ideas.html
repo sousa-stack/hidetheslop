@@ -1,0 +1,118 @@
+<!doctype html>
+<!-- Mockups of the bar a hidden post shows, for Kevin to pick from. Not shipped. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bar ideas</title>
+<style>
+  :root { --ink: #2b2d31; --paper: #edece8; --amber: #fdae17; --red: #c80000; --green: #1d7a3e; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, sans-serif; }
+  header { background: var(--amber); padding: 18px 24px; }
+  header h1 { margin: 0; font: 800 34px/1 "Avenir Next Condensed", "Arial Narrow", sans-serif; text-transform: uppercase; letter-spacing: .02em; }
+  header p { margin: 6px 0 0; max-width: 760px; }
+  main { padding: 8px 24px 40px; max-width: 1180px; }
+  h2 { font: 800 24px/1.1 "Avenir Next Condensed", "Arial Narrow", sans-serif; text-transform: uppercase; margin: 30px 0 4px; border-top: 2px solid var(--ink); padding-top: 14px; }
+  h2 + p { margin: 0 0 12px; max-width: 760px; }
+  .feeds { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .feed { border-radius: 10px; padding: 14px; display: grid; gap: 10px; }
+  .feed.light { background: #f0f2f5; }
+  .feed.dark { background: #18191a; }
+  .feed .tag { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: #65676b; }
+  .feed.dark .tag { color: #b0b3b8; }
+  .post { border-radius: 8px; padding: 10px 12px 2px; background: #fff; }
+  .feed.dark .post { background: #242526; }
+  @media (max-width: 760px) { .feeds { grid-template-columns: 1fr; } main { padding: 8px 14px 40px; } }
+
+  /* ---- the bars ---- */
+  .bar { font: 13px/1.4 system-ui, sans-serif; display: flex; gap: 10px; align-items: center; margin: 0 0 10px; flex-wrap: wrap; }
+  .bar .why { flex: 1; min-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bar button { all: unset; cursor: pointer; white-space: nowrap; }
+  .bar button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+  .bar svg { width: 13px; height: 13px; flex: none; }
+
+  /* Today */
+  .now { color: #6b6b6b; background: rgba(127,127,127,.08); border: 1px dashed rgba(127,127,127,.35); border-radius: 8px; padding: 8px 12px; }
+  .now b { color: #c80000; font-weight: 600; }
+  .now button { text-decoration: underline; }
+
+  /* A: filled buttons */
+  .a { color: #65676b; background: rgba(127,127,127,.08); border: 1px solid rgba(127,127,127,.3); border-radius: 8px; padding: 7px 8px 7px 12px; }
+  .feed.dark .a { color: #b0b3b8; }
+  .a b { color: #c80000; font-weight: 700; }
+  .feed.dark .a b { color: #ff6b6b; }
+  .a button { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; padding: 6px 11px; border-radius: 6px; }
+  .a .show { color: inherit; border: 1px solid currentColor; }
+  .a .ai { background: var(--red); color: #fff; }
+  .a .ok { background: var(--green); color: #fff; }
+
+  /* B: outlined, coloured text */
+  .b { color: #65676b; background: transparent; border: 1px solid rgba(127,127,127,.3); border-radius: 999px; padding: 4px 4px 4px 14px; }
+  .feed.dark .b { color: #b0b3b8; }
+  .b b { color: inherit; font-weight: 700; }
+  .b button { display: inline-flex; align-items: center; gap: 5px; font-weight: 600; padding: 5px 11px; border-radius: 999px; border: 1.5px solid currentColor; }
+  .b .show { color: inherit; }
+  .b .ai { color: #c80000; }
+  .b .ok { color: #1d7a3e; }
+  .feed.dark .b .ai { color: #ff6b6b; }
+  .feed.dark .b .ok { color: #5dd38a; }
+
+  /* C: the poster look */
+  .c { color: var(--ink); background: var(--paper); border-left: 6px solid var(--amber); border-radius: 2px; padding: 0 0 0 12px; gap: 0; }
+  .c b { font: 800 15px/1 "Avenir Next Condensed", "Arial Narrow", sans-serif; text-transform: uppercase; letter-spacing: .03em; margin-right: 10px; }
+  .c .why { padding: 9px 0; }
+  .c button { align-self: stretch; display: inline-flex; align-items: center; gap: 6px; padding: 0 14px; font: 800 14px/1 "Avenir Next Condensed", "Arial Narrow", sans-serif; text-transform: uppercase; letter-spacing: .04em; }
+  .c .show { background: var(--ink); color: var(--paper); }
+  .c .ai { background: var(--red); color: #fff; }
+  .c .ok { background: var(--green); color: #fff; }
+
+  /* D: marks only, the words on hover */
+  .d { color: #65676b; background: rgba(127,127,127,.08); border: 1px solid rgba(127,127,127,.3); border-radius: 8px; padding: 5px 6px 5px 12px; }
+  .feed.dark .d { color: #b0b3b8; }
+  .d b { color: #c80000; font-weight: 700; }
+  .feed.dark .d b { color: #ff6b6b; }
+  .d button { display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; }
+  .d button svg { width: 15px; height: 15px; }
+  .d .show { display: inline-flex; align-items: center; gap: 5px; width: auto; height: auto; border-radius: 6px; padding: 6px 10px; border: 1px solid currentColor; font-weight: 600; }
+  .d .show svg { width: 13px; height: 13px; }
+  .d .ai { background: var(--red); color: #fff; }
+  .d .ok { background: var(--green); color: #fff; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Bar ideas</h1>
+  <p>What a hidden post shows, in four styles, on Facebook's light and dark themes. Each one shows the bar when something's hidden, then the question after you press Show. Green means it's fine, red means it's slop. Nothing here is wired up.</p>
+</header>
+<main id="main"></main>
+<script>
+  const X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  const CHECK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12.5l5 5L19.5 7"/></svg>';
+  const EYE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+  const ideas = [
+    { cls: 'now', name: 'Today', note: 'For comparison: grey text links, and nothing tells you which answer is which.', icons: false },
+    { cls: 'a', name: 'A. Filled buttons', note: 'Solid red for AI and solid green for not AI, with a cross and a tick, so it reads at a glance even if you can’t tell red from green. Show stays quiet, because it isn’t a judgment.', icons: true },
+    { cls: 'b', name: 'B. Outlined pills', note: 'The same colours as outlines. Calmer in the feed, but less obvious than A.', icons: true },
+    { cls: 'c', name: 'C. Poster strip', note: 'The Settings look carried into the feed: amber edge, condensed capitals, square colour blocks. The most “Hide the Slop”, and the most out of place on Facebook.', icons: true },
+    { cls: 'd', name: 'D. Marks only', note: 'Just a cross and a tick, with the words as a tooltip. The smallest, but a new user has to guess what they mean.', icons: true, marksOnly: true },
+  ];
+  function bar(idea, why, buttons) {
+    const btns = buttons.map(([kind, label, icon]) => {
+      const inner = idea.marksOnly && kind !== 'show' ? icon : (idea.icons && icon ? icon : '') + label;
+      return `<button class="${kind}" title="${label}" type="button">${inner}</button>`;
+    }).join('');
+    return `<div class="bar ${idea.cls}"><b>Hide the Slop</b><span class="why">${why}</span>${btns}</div>`;
+  }
+  const states = (idea) => [
+    bar(idea, 'hid this: AI picture, 91% sure', [['show', 'Show', idea.cls === 'now' ? '' : EYE]]),
+    bar(idea, 'was this AI?', [['ai', 'AI, hide it', X], ['ok', 'Not AI', CHECK]]),
+  ];
+  document.getElementById('main').innerHTML = ideas.map((idea) => `
+    <h2>${idea.name}</h2><p>${idea.note}</p>
+    <div class="feeds">
+      <div class="feed light"><span class="tag">Facebook, light</span>${states(idea).map((s) => `<div class="post">${s}</div>`).join('')}</div>
+      <div class="feed dark"><span class="tag">Facebook, dark</span>${states(idea).map((s) => `<div class="post">${s}</div>`).join('')}</div>
+    </div>`).join('');
+</script>
+</body>
+</html>

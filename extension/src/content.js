@@ -237,26 +237,59 @@
 
   // Our bar, inside `el` so it goes away when the site removes the post.
   // buttons: [[label, onClick], ...]
+  // Red with a cross for AI, green with a tick for not AI, so the answers read at a glance,
+  // and still apart if you can't tell red from green. Show is neutral: it isn't a verdict.
+  const BAR_ICONS = {
+    show: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+    ai: '<path d="M6 6l12 12M18 6L6 18"/>',
+    ok: '<path d="M4.5 12.5l5 5L19.5 7"/>',
+  };
+
+  // Sites draw their own dark mode, which prefers-color-scheme doesn't see, so look at
+  // the background the bar will sit on.
+  function onDarkPage(el) {
+    for (let node = el; node && node.nodeType === 1; node = node.parentElement) {
+      const m = getComputedStyle(node).backgroundColor.match(/[\d.]+/g);
+      if (!m || (m.length > 3 && +m[3] === 0)) continue;
+      return 0.299 * m[0] + 0.587 * m[1] + 0.114 * m[2] < 128;
+    }
+    return false;
+  }
+
+  // `buttons` are [label, onClick, kind], kind being show, ai or ok.
   function addBar(el, text, buttons) {
     const ph = document.createElement('div');
     ph.className = 'hidetheslop-ph';
     const root = ph.attachShadow({ mode: 'open' });
+    const dark = onDarkPage(el);
     root.innerHTML = `
       <style>
         :host { all: initial; display: block; }
-        div { font: 13px/1.4 system-ui, sans-serif; color: #6b6b6b; background: rgba(127,127,127,.08);
-              border: 1px dashed rgba(127,127,127,.35); border-radius: 8px; padding: 8px 12px; margin: 4px 0;
-              display: flex; gap: 12px; align-items: center; }
-        b { color: #c80000; font-weight: 600; }
-        span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        button { all: unset; cursor: pointer; color: inherit; text-decoration: underline; white-space: nowrap; }
+        div { font: 13px/1.4 system-ui, sans-serif; color: ${dark ? '#b0b3b8' : '#65676b'};
+              background: rgba(127,127,127,.08); border: 1px solid rgba(127,127,127,.3); border-radius: 8px;
+              padding: 7px 8px 7px 12px; margin: 4px 0; display: flex; flex-wrap: wrap; gap: 8px 10px; align-items: center; }
+        b { color: ${dark ? '#ff6b6b' : '#c80000'}; font-weight: 700; }
+        span { flex: 1; min-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        button { all: unset; cursor: pointer; white-space: nowrap; display: inline-flex; align-items: center; gap: 5px;
+                 font-weight: 600; padding: 6px 11px; border-radius: 6px; }
+        button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+        button svg { width: 13px; height: 13px; flex: none; }
+        .show { color: inherit; border: 1px solid currentColor; padding: 5px 10px; }
+        .ai { color: #fff; background: #c80000; }
+        .ok { color: #fff; background: #1d7a3e; }
+        .ai:hover { background: #a30000; }
+        .ok:hover { background: #166532; }
       </style>
       <div><b>Hide the Slop</b><span></span></div>`;
     root.querySelector('span').textContent = text;
-    for (const [label, onClick] of buttons) {
+    for (const [label, onClick, kind] of buttons) {
       const b = document.createElement('button');
       b.type = 'button';
-      b.textContent = label;
+      if (kind) {
+        b.className = kind;
+        b.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${kind === 'show' ? 2.4 : 3.2}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${BAR_ICONS[kind]}</svg>`;
+      }
+      b.append(label);
       b.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
@@ -267,6 +300,7 @@
     el.prepend(ph);
     return ph;
   }
+
 
   function hide(el, reason, picture) {
     if (!el || el.dataset.hidetheslop) return;
@@ -281,7 +315,7 @@
     } else {
       el.classList.add('hidetheslop-collapsed');
       pictures.set(el, picture || biggestPicture(el));
-      addBar(el, `hid this: ${reason}`, [['Show', () => showAndAsk(el)]]);
+      addBar(el, `hid this: ${reason}`, [['Show', () => showAndAsk(el), 'show']]);
     }
     report();
   }
@@ -297,13 +331,13 @@
         api.runtime.sendMessage({ type: 'learn', url: picture, label: 'ai', source: 'rated' }).catch(() => {});
         delete el.dataset.hidetheslop;
         hide(el, 'you said it was AI', picture);
-      }],
+      }, 'ai'],
       ['Not AI', () => {
         ask.remove();
         api.runtime.sendMessage({ type: 'learn', url: picture, label: 'real', source: 'rated' }).catch(() => {});
         const thanks = addBar(el, "got it, it'll learn from this", []);
         setTimeout(() => thanks.remove(), 2500);
-      }],
+      }, 'ok'],
     ]);
   }
 
@@ -594,17 +628,37 @@
   let lastMove = 0;
 
   // The picture under the pointer, if it's big enough to be worth a button. Sites
-  // often lay transparent boxes over their images, so look through everything there.
+  // often lay transparent boxes over their images, so look through those. But the first
+  // picture found decides: a small one, or one drawn in SVG, is an avatar or icon, and
+  // looking further would hand the button to whatever's behind it, such as a profile
+  // photo's cover. Facebook draws avatars as an SVG <image>.
   function pictureAt(x, y) {
     for (const el of document.elementsFromPoint(x, y)) {
       if (el === chip) return chipFor;
+      if (el instanceof SVGElement && (el.tagName === 'image' || el.querySelector('image'))) return null;
       if (!isMedia(el)) continue;
       const r = el.getBoundingClientRect();
-      if (r.width < MIN_PICTURE_PX || r.height < 150) continue; // avatars, icons, play buttons
+      if (r.width < MIN_PICTURE_PX || r.height < 150) return null; // avatars, icons, play buttons
+      if (isRound(el, r)) return null;
+      // A lone picture or video blurred in place has no bar to show it again, so the
+      // button does that instead.
+      if (el.dataset.hidetheslop === 'hidden') return el;
       if (el.closest('[data-hidetheslop="hidden"]')) return null;
       return el;
     }
     return null;
+  }
+
+  // A big square picture cut into a circle is a profile photo, not a post.
+  function isRound(el, r) {
+    if (Math.abs(r.width - r.height) > r.width * 0.1) return false;
+    for (let node = el, i = 0; node && i < 3; node = node.parentElement, i++) {
+      const style = getComputedStyle(node);
+      if (/circle|ellipse/.test(style.clipPath)) return true;
+      const radius = parseFloat(style.borderTopLeftRadius);
+      if (style.borderTopLeftRadius.endsWith('%') ? radius >= 40 : radius >= r.width * 0.4) return true;
+    }
+    return false;
   }
 
   function removeChip() {
@@ -622,6 +676,7 @@
       `all: initial; position: fixed; z-index: 2147483647; top: ${Math.max(r.top, 0) + 8}px; ` +
         `left: ${Math.min(r.right, window.innerWidth) - 8}px; transform: translateX(-100%);`
     );
+    const showing = pic.dataset.hidetheslop === 'hidden';
     const root = chip.attachShadow({ mode: 'closed' });
     root.innerHTML = `
       <style>
@@ -629,13 +684,22 @@
                  font: 600 12px/1 system-ui, sans-serif; color: #fff; background: rgba(28,25,23,.88);
                  padding: 7px 10px 7px 8px; border-radius: 999px; box-shadow: 0 2px 8px rgba(0,0,0,.35); }
         button:hover { background: #b91c1c; }
+        button.show:hover { background: #1c1917; }
         svg { width: 14px; height: 14px; }
       </style>
-      <button type="button" title="Hide the Slop: hide this and teach it what slop looks like">
+      ${
+        showing
+          ? `<button type="button" class="show" title="Hide the Slop hid this. Show it again">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>
+        Show
+      </button>`
+          : `<button type="button" title="Hide the Slop: hide this and teach it what slop looks like">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
           <circle cx="12" cy="12" r="9.5"/><path d="M5.5 18.5l13-13"/></svg>
         Hide slop
-      </button>`;
+      </button>`
+      }`;
     // Keep the page from treating this as a click on its picture (opening a photo viewer).
     for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {
       chip.addEventListener(type, (e) => {
@@ -644,7 +708,8 @@
         if (type === 'click') {
           const target = chipFor;
           removeChip();
-          hideByHand(target);
+          if (target.dataset.hidetheslop === 'hidden') reveal(target, true);
+          else hideByHand(target);
         }
       });
     }
@@ -655,11 +720,13 @@
   document.addEventListener(
     'mousemove',
     (e) => {
-      if (!settings.hoverButton || !active()) return;
+      if (!active()) return;
       const now = Date.now();
       if (now - lastMove < 80) return;
       lastMove = now;
-      const pic = pictureAt(e.clientX, e.clientY);
+      let pic = pictureAt(e.clientX, e.clientY);
+      // With the hover button off, it still appears to show a blurred picture again.
+      if (pic && !settings.hoverButton && pic.dataset.hidetheslop !== 'hidden') pic = null;
       if (pic === hoverCandidate) return;
       hoverCandidate = pic;
       clearTimeout(hoverTimer);
