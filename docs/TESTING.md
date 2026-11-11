@@ -5,7 +5,7 @@ Run the quick checks after every change, and the real-browser checks after anyth
 ## Quick checks (seconds)
 
 ```bash
-cd extension && node build.mjs && node --test test/meta.test.mjs test/download.test.mjs test/phash.test.mjs test/votes.test.mjs
+cd extension && node build.mjs && node --test test/meta.test.mjs test/download.test.mjs test/phash.test.mjs test/votes.test.mjs test/crowd.test.mjs
 for f in src/*.js; do node --check "$f"; done
 ```
 
@@ -85,6 +85,7 @@ This page runs the real `content.js` on a fake Instagram-style feed, with the ex
 - a sponsored post, a normal post, and a post that appears later
 - a Facebook-style post with unknown markup, next to a normal one
 - a video
+- three posts for the crowd's list, matched by the real `crowd.js` and `phash.js`: one listed, one listed that you rated Not AI under another address, and one not listed. The list is the hashes of `shapes.png` and `crowd-mine.jpg`, worked out when the page loads. The two `crowd-*.jpg` pictures are drawn the same way `eval/vote-check.mjs` draws its own.
 
 Serve the top folder and open it:
 
@@ -93,14 +94,18 @@ python3 -m http.server 8767 --directory ~/Projects/hidetheslop
 ```
 
 Open `http://localhost:8767/extension/test/harness.html` and read each post's `data-hidetheslop` state. The expected results:
-- **Hidden:** label, hashtag, metadata, visual, keyword, fbpost, reel, late.
-- **Visible:** sponsored (the setting is off), normal, fbnormal.
+- **Hidden:** label, hashtag, metadata, visual, keyword, fbpost, reel, late, and crowd, whose bar says "the crowd flagged it" although its robot score is low.
+- **Visible:** sponsored (the setting is off), normal, fbnormal, crowdmine (your Not AI wins) and crowdmiss.
 
 `window.learned` records rating messages as `[label, file, source]`. **AI, hide it** and **Not AI** must say `rated`, and the hover button `hid`. The hover button's shadow root is closed, so it needs a real mouse. A post hidden for its label or tags gets no **was this AI?** question.
 
 ## The vote client: `extension/test/votes.test.mjs`
 
 This runs the real `votes.js` with fake storage and a fake network, so nothing reaches the API. It covers the token against a vector worked out with Python's `hmac`, off meaning off, the queue, every reply, races, near copies, and that nothing but the agreed fields goes in a body. The last two tests read `api/src/` and the build, and fail if the schema or the manifest moves.
+
+## The crowd's list: `extension/test/crowd.test.mjs`
+
+This runs the real `crowd.js` with fake storage, a fake network, fake alarms and a fake model cache. It covers paging with `more`, `add` and `remove`, the 7-day resync that replaces the set, every kind of bad page applying nothing, a `more` that doesn't move `seq`, the page cap, the 20,000 cap, a full store, the exact request options, the timeout, off in all three ways deleting the list and aborting a fetch, Firefox's rule check, the alarm and startup timing, band matching at 0 to 3 bits and not 4, your Not AI by address, by hash and from before 1.9.0, and forgetting it. The last few read `background.js`, `vision.js`, `content.js`, the build and `api/src/routes/verdicts.ts`, and fail if the wiring or the API's reply moves.
 
 ## Real model in a browser: `eval/test-vision.html`
 
@@ -157,6 +162,39 @@ The hash only runs for a rating being queued, and it reuses the picture from the
 
 Measured on one rating of a 1.2 MP picture, sharing added 32–36 ms on Chrome and 36–45 ms on Firefox, and the file wasn't downloaded a second time.
 
+## The crowd's list in real browsers: `eval/crowd-check.mjs`
+
+This borrows `vote-check.mjs`'s headless browsers, copies of `dist/` pointed at this machine, and drawn pictures, and serves a made-up list of 4 hashes in two pages. It needs the same things as `vote-check.mjs`.
+
+```bash
+cd extension && node build.mjs && cd ../eval && node crowd-check.mjs   # about two minutes
+```
+
+It fires the real `fetch-crowd` alarm rather than waiting, then checks: nothing fetched while your robot is off, the alarm moving within 30 minutes when it's turned on, both pages fetched and stored, the headers, a listed picture on a real page hidden by the real content script with "the crowd flagged it" through Chrome's offscreen page and Firefox's background page, an unlisted one and one you rated Not AI at another address left alone, no extra download, 12 MP hashed and over 12 MP skipped, and off deleting the list and stopping fetches. On Firefox a control turns the strip rule off: a POST then carries `Origin: moz-extension://<uuid>`.
+
+Measured on 2026-11-11, on Chrome for Testing 156 and Firefox 160. Chrome's list GET sends no `Origin`:
+
+```
+Host, Connection, User-Agent, Accept: */*, Sec-Fetch-Site: none, Sec-Fetch-Mode: cors,
+Sec-Fetch-Dest: empty, Accept-Encoding, Accept-Language
+```
+
+Firefox's sends no `Origin` either, and didn't even with the strip rule off, so the rule is there for a later version that might:
+
+```
+Host, User-Agent, Accept: */*, Accept-Language, Accept-Encoding, Connection, Priority: u=4
+```
+
+Neither sends `Cookie`, `Referer` or a body.
+
+What hashing every inspected picture adds to `inspect()`, medians of 5 after a warm-up, with the peak of the browser's whole process tree, which is rough. It isn't `about:processes`.
+
+| Picture | Chrome, offscreen | Firefox, background |
+|---|---|---|
+| 1 MP | 264 → 274 ms, within the noise of 20–60 MB | 250 → 258 ms, 1 → 10 MB |
+| 12 MP | 295 → 388 ms, 47 → 135 MB | 266 → 351 ms, 53 → 204 MB |
+| over 12 MP | skipped: 297 → 294 ms | skipped: 266 → 268 ms |
+
 ### With Kevin
 
 These can't run without a person or the live server. The policy has to be live first, so nothing sends before it says what's sent.
@@ -165,6 +203,7 @@ These can't run without a person or the live server. The policy has to be live f
 - Check `about:addons` in Firefox shows the data permission, and that turning it off there turns sharing off.
 - Rate one real AI picture from 5 installs, and confirm the aggregate job publishes it in `/v1/verdicts` within an hour.
 - After real use, check Firefox's memory with `about:processes` or `about:memory`, not Activity Monitor, which hides compressed memory.
+- With 1.9.0 and your robot on, in an install that never rated it: wait for the list (Settings counts it, within half an hour) and check the picture confirmed on 2026-11-11 is hidden on Facebook with "the crowd flagged it".
 
 ## The hash in real browsers: `eval/hash-check.html`
 
@@ -190,7 +229,7 @@ The check opens in its own tab and says Done after about a minute. Remove the ex
 
 ## Settings page: `extension/test/options-preview.html`
 
-This shows the real `options.html` with faked APIs and sample data, and always loads fresh CSS and JS. Add `?empty` to see a fresh install. Add `?page=welcome` or `?page=popup` for those pages. For sharing, `?share` turns it on with 7 ratings waiting, `&stuck` is a server that keeps refusing them, `&nosend` is one that can't be reached, and `?firefox&refuse` is Firefox saying no when you click the switch. For the popup, `&unreached` shows a tab that needs a reload and `&blocked` shows a browser page. The model download is always faked here, and adding `&empty&fail` makes it fail. Use it for any design work, and check phone width with both pages. The website is in `site/`: run `node build.mjs` there and open `site/dist/index.html` from the same server. Hovering in a hidden in-app browser pane is unreliable, so check the welcome page's hover demo with the pane showing. Kevin reviews design changes there in the in-app browser pane. These pages ignore dark mode on purpose.
+This shows the real `options.html` with faked APIs and sample data, and always loads fresh CSS and JS. Add `?empty` to see a fresh install. Add `?page=welcome` or `?page=popup` for those pages. For sharing, `?share` turns it on with 7 ratings waiting, `&stuck` is a server that keeps refusing them, `&nosend` is one that can't be reached, and `?firefox&refuse` is Firefox saying no when you click the switch. `&crowdoff` turns off the crowd's list, which otherwise shows 37 made-up pictures, and `&robotoff` turns your robot off. For the popup, `&unreached` shows a tab that needs a reload and `&blocked` shows a browser page. The model download is always faked here, and adding `&empty&fail` makes it fail. Use it for any design work, and check phone width with both pages. The website is in `site/`: run `node build.mjs` there and open `site/dist/index.html` from the same server. Hovering in a hidden in-app browser pane is unreliable, so check the welcome page's hover demo with the pane showing. Kevin reviews design changes there in the in-app browser pane. These pages ignore dark mode on purpose.
 
 ## The installed extension in Kevin's real Chrome
 

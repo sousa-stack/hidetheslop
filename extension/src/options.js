@@ -106,7 +106,7 @@ async function checkPermission() {
   $('forgetRatings').addEventListener('click', async () => {
     const sentNote = share.checked ? " Ratings you've already shared can't be taken back." : '';
     if (!window.confirm(`Forget all your ratings and go back to the shipped classifier?${sentNote}`)) return;
-    await api.storage.local.remove(['visionRatings', 'visionModel']);
+    await api.storage.local.remove(['visionRatings', 'visionModel', 'ownVerdicts']);
     await api.runtime.sendMessage({ type: 'voteClear' }).catch(() => {});
     showVotes();
   });
@@ -167,6 +167,26 @@ async function checkPermission() {
     else if (changes.voteQueue) showVotes();
   });
   showShare(await slopGetShare());
+
+  // The crowd's list is downloaded by the background, and only while your robot is on.
+  const crowdBox = $('useCrowdList');
+  async function showCrowd() {
+    const say = (t, calm = true) => {
+      $('crowdStatus').textContent = t;
+      $('crowdStatus').classList.toggle('calm', calm);
+    };
+    if (!vbox.checked) return say('This needs your robot, which is off. Turn it on above.', false);
+    if (!crowdBox.checked) return say('');
+    const { crowdList, crowdFetchedAt } = await api.storage.local.get(['crowdList', 'crowdFetchedAt']);
+    const n = Array.isArray(crowdList) ? crowdList.length : 0;
+    if (!crowdFetchedAt) say('The list arrives within half an hour.');
+    else say(n ? `${n.toLocaleString()} ${n === 1 ? 'picture' : 'pictures'} on the list.` : 'Nothing on the list yet.');
+  }
+  crowdBox.addEventListener('change', showCrowd);
+  api.storage.onChanged.addListener((changes, area) => {
+    if ((area === 'sync' && changes.visualCheck) || (area === 'local' && changes.crowdList)) showCrowd();
+  });
+  showCrowd();
 
   const cutoff = $('visualCutoff');
   const showCutoff = () => ($('cutoffOut').textContent = `${cutoff.value}%`);

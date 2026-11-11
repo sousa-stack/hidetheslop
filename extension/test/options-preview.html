@@ -6,7 +6,8 @@
      The model download is always faked; add &empty&fail to make it fail.
      Add ?share to turn sharing on with ratings waiting, &robotoff for the warning that needs your robot, &stuck for a server that keeps
      refusing them, &nosend for one that can't be reached, and &firefox&refuse for
-     Firefox saying no when you turn it on. -->
+     Firefox saying no when you turn it on. &crowdoff turns off the crowd's list, which
+     otherwise holds 37 made-up pictures. -->
 <meta charset="utf-8">
 <script>
   (async () => {
@@ -16,13 +17,14 @@
 <script>
   const empty = ${JSON.stringify(location.search.includes('empty'))};
   const flag = (name) => new URLSearchParams(${JSON.stringify(location.search)}).has(name);
-  const sync = empty ? {} : { keywords: ["Tony's Pizza Palace", '@slopfactory'], visualCheck: !flag('robotoff'), visualCutoff: 0.7 };
+  const sync = empty ? {} : { keywords: ["Tony's Pizza Palace", '@slopfactory'], visualCheck: !flag('robotoff'), visualCutoff: 0.7, useCrowdList: !flag('crowdoff') };
   const fakeE = () => [];
   const local = empty ? {} : {
     blockedImages: ['a', 'b', 'c'],
     visionRatings: { ai: Array.from({ length: 12 }, () => ({ key: '', e: fakeE() })), real: Array.from({ length: 5 }, () => ({ key: '', e: fakeE() })) },
   };
   if (flag('share')) local.shareRatings = true;
+  if (!empty && !flag('crowdoff')) Object.assign(local, { crowdList: Array.from({ length: 37 }, (_, i) => i.toString(16).padStart(16, '0')), crowdFetchedAt: Date.now() });
   // Stands in for the queue in votes.js. Send now takes 5, like the real one.
   const votes = { waiting: flag('share') ? 7 : 0, stuck: flag('stuck') };
   const voteState = () => ({ on: local.shareRatings === true, ...votes });

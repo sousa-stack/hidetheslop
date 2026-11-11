@@ -4,7 +4,7 @@
 import { cpSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
-const version = '1.8.0';
+const version = '1.9.0';
 
 const base = {
   manifest_version: 3,
@@ -41,12 +41,13 @@ const targets = {
   },
   firefox: {
     ...base,
-    // Firefox puts the install's own random address in the Origin of a POST, which would
-    // be a voter ID on every vote. origin-rules.json takes it off, for the API only.
+    // Firefox puts the install's own random address in the Origin of a request, which
+    // would be a voter ID on every vote. origin-rules.json takes it off votes and the list
+    // download, for the API only.
     permissions: [...base.permissions, 'declarativeNetRequestWithHostAccess'],
     declarative_net_request: { rule_resources: [{ id: 'strip-origin', enabled: true, path: 'origin-rules.json' }] },
     background: {
-      scripts: ['common.js', 'meta.js', 'train.js', 'votes.js', 'ort/ort.wasm.min.js', 'phash.js', 'vision.js', 'background.js'],
+      scripts: ['common.js', 'meta.js', 'train.js', 'votes.js', 'crowd.js', 'ort/ort.wasm.min.js', 'phash.js', 'vision.js', 'background.js'],
     },
     browser_specific_settings: {
       gecko: {

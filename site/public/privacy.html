@@ -18,22 +18,24 @@
 
     <div class="policy">
       <p class="lead">Hide the Slop does its work on your computer. It has no accounts, no analytics and no ads, and it doesn't send what you browse to anyone. Sharing your ratings with other people is optional, and off until you turn it on.</p>
-      <p class="fine">Last updated November 1, 2026. This covers version 1.8.0 of the extension and this website.</p>
+      <p class="fine">Last updated November 11, 2026. This covers version 1.9.0 of the extension and this website.</p>
 
       <h2>What the extension reads</h2>
       <p>To find AI content, the extension reads the pages you visit: the text of posts, and the pictures and videos on them. This happens on your computer. That's why the extension asks for access to all sites, and it's what makes it work everywhere, including inside ads.</p>
 
       <h2>What leaves your computer</h2>
-      <p>Unless you turn on sharing, only these two things, and neither sends anything about you or what you browse:</p>
+      <p>Unless you turn on sharing, only these three things, and none of them sends anything about you or what you browse:</p>
       <ul>
         <li><b>Pictures, downloaded again.</b> To check a picture, the extension downloads it again from the site that already showed it to you, without your cookies. That site sees a normal request for that picture.</li>
         <li><b>Your robot, downloaded once.</b> If you turn on the picture check, the 89 MB AI model downloads from a copy on Cloudflare, or from Hugging Face if that copy isn't available. Whichever one serves it sees a normal download from your internet address. If you never turn it on, this doesn't happen.</li>
+        <li><b>The crowd's list, downloaded every few hours.</b> While your robot is on, the extension downloads the list of pictures that people who share their ratings confirmed as AI, from api.hidetheslop.com. It's a list of fingerprints, and everyone downloads the same one. The extension checks pictures against it on your computer, so it never asks the server about any picture you see. The server and Cloudflare, which sits in front of it, see your internet address while the list is in transit, as with any download, and the server doesn't log it. This is on from version 1.9.0, including for people updating from 1.8.0, and <i>Hide pictures the crowd flagged</i> in Settings turns it off. Turning it off, or turning your robot off, deletes the list.</li>
       </ul>
 
       <h2>What's kept on your computer</h2>
       <ul>
         <li><b>Your settings,</b> including your blocklist and paused sites. These sync through your browser account if you've turned on browser sync, which is run by your browser's maker.</li>
-        <li><b>Your ratings:</b> the numbers that describe each picture you rate, and the web address it came from.</li>
+        <li><b>Your ratings:</b> the numbers that describe each picture you rate, and the web address it came from. Also, for up to 2,000 ratings, the address, the picture's fingerprint and your answer, so a picture you said wasn't AI is never hidden by the crowd's list.</li>
+        <li><b>The crowd's list,</b> while it's on: up to 20,000 fingerprints, and when it was last downloaded.</li>
         <li><b>The addresses of pictures you hid by hand,</b> up to 1,000.</li>
         <li><b>Your robot,</b> if you downloaded it.</li>
         <li><b>If you've ever turned on sharing:</b> the ratings waiting to send, a random secret that makes your vote codes, and the fingerprints of up to 5,000 pictures you've already shared. The secret and the fingerprints stay when you turn sharing off or forget your ratings, so that rating a picture again replaces your vote instead of adding a second one.</li>
@@ -52,7 +54,7 @@
       <p><b>What's never sent:</b> the picture, its web address, the page it was on, your name or account, any ID for you or your browser, or anything about pictures you only scrolled past. Ratings of video frames and ratings made in a private window stay on your computer.</p>
       <p><b>When it's sent:</b> 1 to 6 hours after you rate, at most 5 ratings at a time, so the timing doesn't follow your browsing. <i>Send now</i> in Settings sends sooner, when you ask it to.</p>
       <p><b>What the server sees:</b> the server and Cloudflare, which sits in front of it, see your internet address while a request is in transit, as with any request. The server doesn't log it, and keeps it in memory only to limit how many requests one address can make. The ratings in one batch arrive together, so someone with direct access to the live database could tell which ones came in the same request, without being able to tell who sent them. Your browser also sends its usual request details, such as its name, version and language. The server doesn't store those.</p>
-      <p><b>How it's used:</b> when enough installs agree a picture is AI, that picture's fingerprint goes in a public list, for the extension to use. Kevin Sousa, who makes Hide the Slop, may check the numbers by hand for forgeries and abuse, and they're used to retrain the robot everyone gets.</p>
+      <p><b>How it's used:</b> when enough installs agree a picture is AI, that picture's fingerprint goes in a public list, which every copy of the extension downloads whole and matches on its own computer. Kevin Sousa, who makes Hide the Slop, may check the numbers by hand for forgeries and abuse, and they're used to retrain the robot everyone gets.</p>
       <p><b>How long it's kept:</b> a picture with fewer than 5 votes is deleted 90 days after it was first seen. Pictures with 5 or more stay, because that's the list. Backups can hold deleted data about a month longer: 14 nights on the server, 30 days encrypted on Cloudflare R2, plus weekly backups of the whole server.</p>
       <p><b>Taking it back:</b> turning sharing off stops sending and clears what's waiting straight away. Ratings already sent can't be taken back, because nothing ties them to you, so there's no way to find yours.</p>
 

@@ -44,10 +44,16 @@
           // The real model is checked by eval/test-vision.html; here we only test the wiring.
           if (msg.type === 'learn') { window.learned.push([msg.label, msg.url.split('/').pop(), msg.source]); return true; }
           if (msg.type === 'check') {
-            const bytes = new Uint8Array(await (await fetch(msg.url)).arrayBuffer());
+            const blob = await (await fetch(msg.url)).blob();
+            const bytes = new Uint8Array(await blob.arrayBuffer());
+            // The crowd's list is matched by the real crowd.js and phash.js, as background.js does.
+            await crowdReady;
+            const phash = msg.picture ? (await SlopHash.fromBlob(blob)).phash : undefined;
+            const u = new URL(msg.url);
             return {
               meta: msg.meta ? SlopMeta.scan(bytes) : null,
               score: msg.picture ? (msg.url.includes('looks-ai') ? 0.95 : 0.05) : null,
+              crowd: msg.picture ? await SlopCrowd.flagged(u.origin + u.pathname, phash) : false,
             };
           }
         },
@@ -95,8 +101,29 @@
   </div>
   <video id="reel" poster="fixtures/looks-ai.png?reel" style="width:220px;height:220px"></video>
 
+  <!-- The crowd's list holds shapes.png and crowd-mine.jpg. You rated crowd-mine.jpg Not AI
+       under another address, so only its hash can tell, and crowd-miss.jpg isn't listed.
+       Your robot scores all three low. -->
+  <article id="crowd"><header><a href="/crowd">crowd</a></header>
+    <img src="fixtures/shapes.png" alt="" style="width:200px;height:150px"><p>Nothing to see here.</p></article>
+  <article id="crowdmine"><header><a href="/mine">mine</a></header>
+    <img src="fixtures/crowd-mine.jpg" alt="" style="width:200px;height:150px"><p>On the list, but you said Not AI.</p></article>
+  <article id="crowdmiss"><header><a href="/miss">miss</a></header>
+    <img src="fixtures/crowd-miss.jpg" alt="" style="width:200px;height:150px"><p>Not on the list.</p></article>
+
   <script src="../src/common.js"></script>
   <script src="../src/meta.js"></script>
+  <script src="../src/phash.js"></script>
+  <script src="../src/crowd.js"></script>
+  <script>
+    const hashFile = async (f) => (await SlopHash.fromBlob(await (await fetch(`fixtures/${f}`)).blob())).phash;
+    const crowdReady = (async () => {
+      const [listed, mine] = [await hashFile('shapes.png'), await hashFile('crowd-mine.jpg')];
+      store.local.crowdList = [listed, mine];
+      store.local.ownVerdicts = [{ key: 'https://elsewhere.example/copy.jpg', phash: mine, label: 'real' }];
+      window.crowdHashes = { listed, mine, miss: await hashFile('crowd-miss.jpg') };
+    })();
+  </script>
   <script src="../src/content.js"></script>
   <script>
     // A post that shows up later, like infinite scroll.

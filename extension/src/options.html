@@ -25,6 +25,11 @@
       <div class="controls">
         <label class="row"><span><b></b><small>Your own small AI spots the pictures nobody labeled. It runs on your computer, and nothing is uploaded unless you turn on sharing.</small><small id="visualStatus" class="status"></small></span>
           <input type="checkbox" class="switch-input" id="visualCheck" role="switch" data-on="Hide AI pictures nobody labeled" data-off="Show AI pictures nobody labeled"></label>
+        <label class="row"><span><b></b><small>Your ratings can help hide slop for other people. When this is on, each picture you rate sends a fingerprint of it and your answer, hours later and a few at a time. The picture, its web address and anything about you stay here. Your robot has to be on for you to rate.</small><small id="shareStatus" class="status"></small></span>
+          <input type="checkbox" class="switch-input" id="shareRatings" role="switch" data-on="Share your ratings" data-off="Share your ratings"></label>
+        <p id="votes" class="votes" hidden><span id="voteCount"></span> <button id="sendNow" class="link" hidden>Send now</button></p>
+        <label class="row"><span><b></b><small>Every few hours, the list of pictures that people who share their ratings agreed are AI downloads to your computer. Everyone gets the same list, and your robot checks pictures against it right here, so nothing about what you look at is sent. Your robot has to be on for this.</small><small id="crowdStatus" class="status"></small></span>
+          <input type="checkbox" class="switch-input" id="useCrowdList" role="switch" data-key="useCrowdList" data-on="Hide pictures the crowd flagged" data-off="Show pictures the crowd flagged"></label>
         <div class="row slider">
           <span><b>How sure before hiding</b><small>Lower catches more slop, and more real pictures by mistake.</small></span>
           <input type="range" id="visualCutoff" min="50" max="95" step="5"><output id="cutoffOut"></output>
@@ -42,9 +47,6 @@
             <button id="forgetRatings" class="link" hidden>Forget them</button>
           </div>
         </div>
-        <label class="row"><span><b></b><small>Your ratings can help hide slop for other people. When this is on, each picture you rate sends a fingerprint of it and your answer, hours later and a few at a time. The picture, its web address and anything about you stay here. Your robot has to be on for you to rate.</small><small id="shareStatus" class="status"></small></span>
-          <input type="checkbox" class="switch-input" id="shareRatings" role="switch" data-on="Share your ratings" data-off="Share your ratings"></label>
-        <p id="votes" class="votes" hidden><span id="voteCount"></span> <button id="sendNow" class="link" hidden>Send now</button></p>
         <details>
           <summary>How it works</summary>
           <p>Your robot is a small AI model, a one-time 89 MB download. It only looks at pictures and never makes any. Every picture and video you scroll past gets a score for how AI-made it looks, and anything above your cutoff is hidden behind a Show bar. Videos always need at least 90%.</p>
@@ -52,6 +54,7 @@
           <p><i>Save to a file</i> exports your ratings as numbers that describe each picture, not the pictures themselves.</p>
           <p><i>Share your ratings</i> sends only ratings you make while it's on. Each one is a fingerprint of the picture, your answer, whether you rated it or hid it, and a code that lets you change your answer without adding a second vote. If 3 or more installs rated the same picture, the numbers that describe it can go too. Nothing is sent for pictures you only scroll past, or for private windows.</p>
           <p>Turning it off stops sending and clears what's waiting. Ratings already sent can't be taken back, because nothing ties them to you. Your internet address is seen on the way, as with any request, and isn't kept. The <a href="https://hidetheslop.com/privacy" target="_blank" rel="noopener noreferrer">privacy policy</a> has the details.</p>
+          <p><i>Hide pictures the crowd flagged</i> uses what everyone shared. A picture joins the list once 5 or more installs have rated it and at least 4 in 5 said AI. The list holds fingerprints only, it's downloaded whole, and your robot fingerprints each picture it already looks at and checks the list itself, so nobody is asked about any one picture. Anything it hides keeps a Show button, and if you've rated a picture <i>Not AI</i>, the crowd never hides it for you. Turning it off, or turning your robot off, deletes the list.</p>
         </details>
       </div>
     </section>

@@ -10,6 +10,7 @@ A Chrome and Firefox extension that hides AI-generated images, posts and ads.
 | AI hashtags and phrases (#aiart, #midjourney, "made with ChatGPT", "AI-generated flyer") | Same feeds plus X, Reddit, LinkedIn | Good. Also hides posts that talk about AI images. |
 | AI metadata inside the image file: C2PA Content Credentials and IPTC "trainedAlgorithmicMedia", Midjourney, DALL·E, ChatGPT, Firefly, Stable Diffusion and ComfyUI settings, the AIGC label | Every site, including ad iframes | Exact when the metadata survived. Facebook and Instagram strip it on upload; restaurant sites, ad networks and image hosts often don't. |
 | **The picture itself** (off until you turn it on in Settings): a small AI model scores every picture, video thumbnail, and a frame of videos with no thumbnail | Every site | Good on the glossy AI flyer look it was trained on: caught 83 of 93 AI pictures and wrongly flagged 8 of 131 real ones in testing (mostly human-made flyers built from templates). Everything it hides gets a Show bar, and your ratings there retrain it. |
+| **The crowd's list** (on, but needs the picture check): pictures that 5 or more installs rated, with at least 4 in 5 saying AI | Every site | Exact copies and reposts. The list is downloaded whole every few hours and matched on your computer. Your own **Not AI** always wins. |
 | Your blocklist: restaurant names, pages, @handles, words | Feeds | Exact. Right-click a post and pick **Always hide posts from this account…** |
 | **Hide slop** button: rest the mouse on a big picture for half a second | Anywhere | Hides the post, keeps that image hidden, and teaches the picture check. It floats above the page, so the page's images aren't changed. Turn it off in Settings. |
 | Right-click **Hide this as AI slop** | Anywhere | Same as the button. |
@@ -55,7 +56,7 @@ If Firefox didn't grant site access at install, the settings page opens with an 
 
 ## Privacy
 
-To check an image, the extension downloads that image again from the server the page already loaded it from, without cookies: once per picture, whole if the picture check is on, or just the first 512 KB for the metadata check alone. Hosts known to strip metadata (Facebook's and Instagram's) aren't downloaded just for that. Nothing is sent to any other server unless you turn on sharing. The only other download is the model, from this project's copy on Cloudflare or from Hugging Face, when you turn the picture check on. There are no analytics. Settings sync through your browser account.
+To check an image, the extension downloads that image again from the server the page already loaded it from, without cookies: once per picture, whole if the picture check is on, or just the first 512 KB for the metadata check alone. Hosts known to strip metadata (Facebook's and Instagram's) aren't downloaded just for that. Nothing is sent to any other server unless you turn on sharing. The only other downloads are the model, from this project's copy on Cloudflare or from Hugging Face, when you turn the picture check on, and, while the picture check is on, the crowd's list of confirmed AI pictures from `api.hidetheslop.com` every few hours. Everyone downloads the same list, and the extension matches pictures against it on your computer, so it never asks about any one picture. The server and Cloudflare see your IP address in transit. **Hide pictures the crowd flagged** in Settings turns it off and deletes the list. There are no analytics. Settings sync through your browser account.
 
 **Sharing your ratings is optional, and off until you turn it on.** With it on, each rating you make goes to `api.hidetheslop.com`: a 64-bit hash of the picture, your answer, whether you rated it or hid it, and a per-picture code, 1 to 6 hours later and at most 5 at a time. If 3 or more installs rated that exact picture, the server can also ask for the numbers that describe it. The picture, its address, the page and any ID for you are never sent. The server and Cloudflare see your IP address in transit, and the server doesn't log it. Ratings already sent can't be taken back, because nothing ties them to you. The whole list is in the [privacy policy](https://hidetheslop.com/privacy) and [docs/CROWD-API.md](docs/CROWD-API.md).
 
@@ -65,7 +66,7 @@ To check an image, the extension downloads that image again from the server the 
 | Folder | What's in it |
 |---|---|
 | `extension/` | The extension. `src/` is the source; `build.mjs` adds each browser's manifest. |
-| `api/` | The server for shared ratings, which the extension doesn't call yet. |
+| `api/` | The server for shared ratings and the crowd's list. |
 | `site/` | [hidetheslop.com](https://hidetheslop.com) and the privacy policy. |
 | `eval/` | Scripts that compared detectors and train the picture classifier. `npm install` there, then `./get-models.sh`. |
 | `brand/` | The logo. `extension/tools/make_icons.sh` makes the toolbar icons from it. |

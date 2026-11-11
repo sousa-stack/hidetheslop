@@ -12,17 +12,17 @@ Updated 2026-11-01. Start here.
 - [hidetheslop.com](https://hidetheslop.com) and its privacy policy, on Cloudflare Workers. The install buttons say "coming soon".
 - The model at `models.hidetheslop.com`, on Cloudflare R2, with Hugging Face as the fallback.
 - `hello@hidetheslop.com`, forwarding to Kevin's Gmail. Tested.
-- The API at `api.hidetheslop.com` and the status page at `status.hidetheslop.com`, on the droplet behind Cloudflare. Checked live: direct access is blocked, input rules and rate limits work, verdicts are cached, and no client IPs are in the logs. It holds Kevin's first test votes.
+- The API at `api.hidetheslop.com` and the status page at `status.hidetheslop.com`, on the droplet behind Cloudflare. Checked live: direct access is blocked, input rules and rate limits work, verdicts are cached, and no client IPs are in the logs. It holds Kevin's test votes and its first published verdict.
 
 **Built, not live:**
-- The extension, version 1.8.0, with voting built and off by default. Not in any store. The first real votes reached the live API from Kevin's Chrome on 2026-11-01. Firefox's real consent prompt, and a picture reaching 5 votes, are still to test.
+- The extension, version 1.8.0, with voting built and off by default. Not in any store. Tested for real on 2026-11-11: votes from Chrome, Firefox, Arc and second profiles, Firefox's own consent prompt, an embedding sent once a picture reached 3 installs, and one AI picture reaching 5 installs, confirmed and published in `/v1/verdicts` through Cloudflare. All five installs gave that picture the identical hash.
 - Deploys from GitHub, which stay off until the secrets are added.
 - The production stack, proven on this Mac by `scripts/local-stack.sh`: 30 checks through the real Compose file and a Caddyfile generated from the real one, including `deploy.sh` rollback and an encrypted backup and restore.
-- The perceptual hash, `extension/src/phash.js`. It isn't called by the extension yet.
+- Verdict downloads, version 1.9.0, built on 2026-11-11 and tested in headless Chrome and Firefox against a local list (`eval/crowd-check.mjs`). Never loaded by Kevin, and never run against the live list.
 
 **Never run for real:**
 - The workflow's deploy job. Its test job passes on GitHub.
-- A backup with real rows in it: they run nightly to R2 and the lock is proven, but the database is still empty.
+- Restoring a backup with real rows in it. Backups run nightly to R2 and the lock is proven, but every restore so far has been of an empty database.
 - The hash on a Chrome offscreen page or a Firefox background page. It has passed on web pages in Chrome, Firefox and Safari, and on extension pages in Kevin's Chrome and Firefox.
 - Clicking "Turn it on" on a real install, which would be the first real download from the model mirror.
 - A true first install opening the welcome page, and the update rebuild of a person's classifier.
@@ -36,7 +36,7 @@ Updated 2026-11-01. Start here.
 2. **The droplet (item 20).** The stack is proven locally, so follow the going-live checklist in CROWD-API.md.
 3. **Voting in the extension (item 18).** Build it and test it on Kevin's two laptops with a manual install, because every store update can wait days for review. Once it works there, submit unlisted to Chrome and Firefox, to prove the real install and update path and start the review early. See "Installing before launch". Update the privacy policy and the Firefox data permission first, and turn on no sharing for anyone before the policy says what's sent. The policy must also name Cloudflare R2 as where encrypted backups are kept, and say how long: 14 nights on the droplet, 30 days in R2, plus droplet backups.
 4. **Test with real data.** Kevin votes on real feeds from two laptops with different accounts. Confirm votes arrive, the aggregate job runs, verdicts publish, and the rules in the promises section of CROWD-API.md hold on the live server: no IPs in logs, lone hashes expire. Restore a backup to prove it works, and load-test the votes route.
-5. **Verdict downloads (item 19).** Build them against real verdicts, and confirm the extension hides a picture from the list.
+5. **Verdict downloads (item 19).** Built in 1.9.0. Still to do: deploy the privacy policy, load the build, and confirm the picture confirmed on 2026-11-11 is hidden on Facebook in an install that never rated it.
 6. **Safari (item 23),** so it launches with the other browsers.
 7. **The launch list below,** then the "Going public" list, then the store listings.
 
@@ -117,7 +117,8 @@ Design: [CROWD-API.md](CROWD-API.md). Build plan: [plans/2026-10-30-local-api.md
 16. **The API and its deploy files, running locally.** Fastify, Drizzle and Postgres in `api/`, with the fixed Docker, Caddy and deploy files at the top of the repo. Built and tested locally; not deployed. The compose file and the GitHub workflow haven't run yet.
 17. **Same-template flyer test.** Compare pHashes of flyers from the same template before the extension sends anything. They might collide, and they're already the main false positive. Tested on 23 flyers from 4 templates: layout alone never matched, and only the same artwork merged. A small sample, so keep adding to it.
 18. **Voting in the extension.** Off by default, batched, and with the README, privacy policy and Firefox data permissions updated first. The list is in CROWD-API.md.
-19. **Verdict downloads in the extension.** Match locally, then hide with a bar saying the crowd flagged it.
+19. **Verdict downloads in the extension.** Built in 1.9.0: the list is matched locally and hides with a bar saying the crowd flagged it. See CROWD-API.md.
+24. **A block list for verdicts, before launch.** A forged verdict hides a picture for everyone, and the hourly job would publish it again after a manual fix, so today the only remedy is deleting its votes by hand. Add a list of hashes the job never publishes, and a way for Kevin to add to it.
 20. **Put the API on a droplet.** Follow Kevin's checklist in CROWD-API.md. This now comes before the store launch.
 21. **Donations.** GitHub Sponsors and Ko-fi, a small link in Settings, and a public "server costs this month" line on the site.
 23. **Safari from launch.** Kevin has an Apple developer account, and Safari is a launch target, not a later idea. Mac Safari comes first.

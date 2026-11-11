@@ -1,8 +1,8 @@
 // Chrome runs this as a service worker (needs importScripts); Firefox loads
-// common.js, meta.js, train.js, votes.js and the image model files first via
+// common.js, meta.js, train.js, votes.js, crowd.js and the image model files first via
 // background.scripts.
 if (typeof importScripts === 'function' && typeof SlopMeta === 'undefined') {
-  importScripts('common.js', 'meta.js', 'train.js', 'votes.js');
+  importScripts('common.js', 'meta.js', 'train.js', 'votes.js', 'crowd.js');
 }
 
 const api = SLOP_API;
@@ -13,7 +13,7 @@ const CACHE_MAX = 3000;
 // ---- image scanning -------------------------------------------------------
 
 // Runs `work(url)` at most `parallel` at a time, once per URL, remembering up to
-// `max` results.
+// `max` results. `.forget()` drops what it remembers.
 function cachedQueue(work, parallel, max = CACHE_MAX) {
   const cache = new Map();
   const inflight = new Map();
@@ -39,7 +39,7 @@ function cachedQueue(work, parallel, max = CACHE_MAX) {
         });
     }
   }
-  return (url) => {
+  const run = (url) => {
     if (cache.has(url)) return Promise.resolve(cache.get(url));
     if (inflight.has(url)) return inflight.get(url);
     const p = new Promise((resolve) => queue.push({ url, resolve }));
@@ -47,6 +47,8 @@ function cachedQueue(work, parallel, max = CACHE_MAX) {
     pump();
     return p;
   };
+  run.forget = () => cache.clear();
+  return run;
 }
 
 async function readHead(url) {
@@ -99,16 +101,21 @@ async function ensureOffscreen() {
   await creatingOffscreen;
 }
 
-// One download gets both the metadata verdict and the picture's 512-number summary.
-// Kept so a rating can reuse the summary.
+// One download gets the metadata verdict, the picture's 512-number summary and, while
+// the crowd's list is in use, its hash. Kept so a rating can reuse them.
 const inspectUrl = cachedQueue(async (url) => {
-  if (typeof SlopVision !== 'undefined') return SlopVision.inspect(url);
+  const hash = /^https?:/.test(url) && (await SlopCrowd.inUse().catch(() => false));
+  if (typeof SlopVision !== 'undefined') return SlopVision.inspect(url, { hash });
   await ensureOffscreen();
-  return api.runtime.sendMessage({ target: 'offscreen', type: 'inspect', url });
+  return api.runtime.sendMessage({ target: 'offscreen', type: 'inspect', url, hash });
 }, 2, 500);
+// Pictures inspected before the list was turned on have no hash to match.
+api.storage.onChanged.addListener((changes, area) => {
+  if (area === 'sync' && changes.useCrowdList) inspectUrl.forget();
+});
 
-// The hash a shared rating needs, from wherever the model runs. It decodes the picture
-// again at full size, so it only happens for a rating that's about to be queued.
+// The hash for a rating that inspect() didn't hash, from wherever the model runs. It
+// decodes the picture again at full size, so it only happens for a rating.
 async function hashUrl(url) {
   if (typeof SlopVision !== 'undefined') return SlopVision.hash(url);
   await ensureOffscreen();
@@ -133,13 +140,15 @@ api.storage.onChanged.addListener((changes, area) => {
 const STRIPS_METADATA = /(^|\.)(fbcdn\.net|cdninstagram\.com)$/;
 
 // What a content script wants to know about an image. `picture`: score how it looks.
-// `meta`: read its metadata. Returns { meta, score }, or null.
+// `meta`: read its metadata. Returns { meta, score, crowd }, or null. `crowd` says the
+// picture matches the crowd's list, matched here and never looked up.
 async function check({ url, picture, meta }) {
   const inspected = picture ? await inspectUrl(url) : null;
   if (inspected) {
     return {
       meta: meta ? inspected.meta : null,
       score: SlopTrain.score(await currentClassifier(), inspected.embedding),
+      crowd: await SlopCrowd.flagged(imageKey(url), inspected.phash).catch(() => false),
     };
   }
   // No model (or it failed): the metadata check still works on its own.
@@ -168,17 +177,27 @@ function learn(url, label, source, incognito) {
     await api.storage.local.set({ visionRatings, visionModel: await retrain(visionRatings) });
     // The rating is saved by now, so nothing here can lose it. Video frames are skipped
     // because their hash changes with the frame.
-    if ((await sharing) && !incognito && /^https?:/.test(url) && (source === 'rated' || source === 'hid')) {
-      await queueVote(url, label, source, inspected.embedding).catch(() => {});
-    }
+    const share = (await sharing) && !incognito && /^https?:/.test(url) && (source === 'rated' || source === 'hid');
+    const phash = await ratedHash(url, inspected, share).catch(() => null);
+    // Remembered whether or not you share, so your Not AI beats the crowd's list.
+    if (/^https?:/.test(url)) await SlopCrowd.remember(key, phash, label).catch(() => {});
+    if (share) await queueVote(phash, label, source, inspected.embedding).catch(() => {});
     return true;
   }).catch(() => false);
   return learning;
 }
 
-async function queueVote(url, label, source, embedding) {
-  const phash = await hashUrl(url);
+async function queueVote(phash, label, source, embedding) {
   if (phash) await SlopVotes.add({ phash, label, source, embedding });
+}
+
+// The hash inspect() took from its own download, when the crowd's list is in use, so
+// the picture isn't fetched again. Otherwise a second look, only if something needs it.
+async function ratedHash(url, inspected, share) {
+  if (!/^https?:/.test(url)) return null;
+  if (inspected.phash !== undefined) return inspected.phash;
+  if (!share && !(await SlopCrowd.inUse())) return null;
+  return hashUrl(url);
 }
 
 async function retrain(ratings) {
@@ -313,3 +332,4 @@ api.runtime.onInstalled.addListener(async ({ reason }) => {
 api.runtime.onStartup.addListener(createMenus);
 
 SlopVotes.start();
+SlopCrowd.start();

@@ -12,7 +12,8 @@
 | `vision.js` | Firefox background page, Chrome `offscreen.html`, options page | `SlopVision`: downloads the CLIP model, turns a picture into a 512-number embedding, hashes a picture for a shared rating |
 | `phash.js` | Firefox background page, Chrome `offscreen.html` | `SlopHash`: the perceptual hash a vote carries |
 | `votes.js` | background | `SlopVotes`: the token, the vote queue and sending, when you've turned sharing on |
-| `origin-rules.json` | Firefox only | takes `Origin` off requests to the API, because Firefox puts the install's random address in it |
+| `crowd.js` | background | `SlopCrowd`: downloads the crowd's list of confirmed AI pictures and matches hashes against it, your own verdicts first |
+| `origin-rules.json` | Firefox only | takes `Origin` off GETs and POSTs to the API, because Firefox puts the install's random address in it |
 | `offscreen.html` / `offscreen.js` | Chrome only | hosts `vision.js`, because a service worker can't run it |
 | `ort/` | with `vision.js` | onnxruntime-web 1.31.1 (MIT), WebAssembly build |
 | `popup.*` | toolbar popup | count hidden on this page, show all, pause on this site |
@@ -41,30 +42,30 @@
 
 ## The background's `check`
 
-- **Picture check on:** `inspectUrl` downloads the picture **once** and returns both the metadata verdict and the embedding. `SlopTrain.score()` then scores the embedding with the current classifier. In Firefox, `vision.js` runs right there. Chrome creates `offscreen.html` and sends it an `inspect` message with `target: 'offscreen'`.
+- **Picture check on:** `inspectUrl` downloads the picture **once** and returns the metadata verdict, the embedding and, while the crowd's list is in use, the hash. `SlopTrain.score()` then scores the embedding with the current classifier, and `SlopCrowd.flagged()` checks the hash against the list. A match hides with "the crowd flagged it", whatever the score. In Firefox, `vision.js` runs right there. Chrome creates `offscreen.html` and sends it an `inspect` message with `target: 'offscreen'`.
 - **Picture check off, or the model failed:** `scanUrl` downloads only the first 512 KB and reads the metadata. Hosts that strip metadata (`STRIPS_METADATA`: fbcdn.net, cdninstagram.com) aren't downloaded at all for this.
 - Results are cached per URL, at most 2 picture checks run at once, and every download is made without cookies.
 
 ## Sharing a rating
 
-`learn()` saves the rating first, so nothing later can lose it. If sharing was on when you rated, and it isn't a private window or a video frame, `hashUrl` gets the hash from wherever the model runs (`SlopVision.hash`, through a `hash` message on Chrome), and `SlopVotes.add` queues it with the embedding squeezed to int8. An hourly alarm sends what's due. See [CROWD-API.md](CROWD-API.md).
+`learn()` saves the rating first, so nothing later can lose it. Then it takes the hash `inspect()` already made, or, if there isn't one and sharing or the crowd's list needs it, `hashUrl` gets it from wherever the model runs (`SlopVision.hash`, through a `hash` message on Chrome). `SlopCrowd.remember` keeps your answer in `ownVerdicts`. If sharing was on when you rated, and it isn't a private window or a video frame, `SlopVotes.add` queues it with the embedding squeezed to int8. An hourly alarm sends what's due. See [CROWD-API.md](CROWD-API.md).
 
 ## Messages
 
 | From → to | `type` | Meaning |
 |---|---|---|
-| content → background | `check` `{url, meta, picture}` | → `{ meta, score }` or null |
+| content → background | `check` `{url, meta, picture}` | → `{ meta, score, crowd }` or null |
 | content → background | `learn` `{url, label: 'ai'│'real', source: 'rated'│'hid'}` | save a rating, retrain, and queue a vote if sharing is on |
 | content → background | `stats` `{count, reasons}` | per-frame hidden count, for the badge and popup |
 | popup → background | `tabStats` `{tabId}` | totals for the popup |
 | options → background | `voteState`, `voteSend`, `voteClear` | the count and stuck state for Settings, **Send now**, and clearing the queue when you forget your ratings. The queue belongs to the background |
 | popup → content | `revealAll`, `whereAmI` | show everything / which host this tab is on |
 | background → content | `menu` `{id: 'hide'│'block', srcUrl}` | right-click menu choice |
-| background → offscreen | `inspect` `{url}`, `hash` `{url}`, with `target: 'offscreen'` | Chrome only |
+| background → offscreen | `inspect` `{url, hash}`, `hash` `{url}`, with `target: 'offscreen'` | Chrome only |
 
 ## Storage
 
-**`storage.sync`** holds the settings in `SLOP_DEFAULTS`: `enabled`, `labels`, `hashtags`, `scanImages`, `includeEdited`, `visualCheck`, `visualCutoff`, `hideSponsored`, `hoverButton`, `mode`, `keywords`, `disabledSites`. When any of these changes, content scripts show everything again and rescan.
+**`storage.sync`** holds the settings in `SLOP_DEFAULTS`: `enabled`, `labels`, `hashtags`, `scanImages`, `includeEdited`, `visualCheck`, `visualCutoff`, `useCrowdList`, `hideSponsored`, `hoverButton`, `mode`, `keywords`, `disabledSites`. When any of these changes, content scripts show everything again and rescan.
 
 **`storage.local`** holds:
 - `blockedImages`: origin plus path of pictures hidden by hand, at most 1000.
@@ -75,6 +76,8 @@
 - `voteQueue`: votes waiting to send, `{phash, label, source, vector, after, n}`, at most 500. `vector` is about 700 bytes of base64, `after` is when it's due, and `n` changes when an entry is replaced.
 - `voteSent`: hashes this install has sent, at most 5,000, so a near copy replaces its vote.
 - `voteRefused`: batches refused in a row. At 3, sending stops.
+- `ownVerdicts`: `{key, phash, label}` for your ratings, at most 2,000, shared or not, so your Not AI beats the crowd's list. `phash` is null when nothing needed a hash.
+- `crowdList`: the crowd's confirmed AI hashes, at most 20,000. `crowdSeq` is where the next fetch starts, `crowdFetchedAt` when it last worked, and `crowdFullAt` the last full resync. All four go when the list is turned off, or your robot is.
 
 **Cache Storage `hidetheslop-model`** holds the CLIP model file, downloaded from our R2 copy at `models.hidetheslop.com`, or a pinned Hugging Face revision if that fails, and checked against its SHA-256 hash (`vision.js`).
 
@@ -93,7 +96,7 @@
 
 ## The API
 
-`api/` is a small server that pools ratings between people: Fastify, Drizzle and Postgres, behind Caddy and Cloudflare on one droplet. The extension only calls it when you've turned on sharing. The design, the privacy rules and what the extension does are in [CROWD-API.md](CROWD-API.md).
+`api/` is a small server that pools ratings between people: Fastify, Drizzle and Postgres, behind Caddy and Cloudflare on one droplet. The extension sends ratings to it only when you've turned on sharing, and downloads the crowd's list from it while your robot is on. The design, the privacy rules and what the extension does are in [CROWD-API.md](CROWD-API.md).
 
 | File | Job |
 |---|---|

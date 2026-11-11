@@ -14,6 +14,7 @@ var SLOP_DEFAULTS = {
   includeEdited: true,  // also images marked as AI-edited (generative fill etc.)
   visualCheck: false,   // guess from the pixels with the downloaded model (vision.js)
   visualCutoff: 0.7,    // how sure the model must be before hiding
+  useCrowdList: true,   // download the crowd's list of confirmed AI pictures and match it here (crowd.js)
   hideSponsored: false, // hide every sponsored/promoted post on social feeds
   hoverButton: true,    // "Hide slop" button when you rest the mouse on a big picture
   mode: 'placeholder',  // 'placeholder' leaves a "show" bar, 'remove' leaves nothing

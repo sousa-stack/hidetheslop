@@ -11,7 +11,8 @@
 //
 // Chrome needs Playwright's Chrome for Testing in ~/Library/Caches/ms-playwright, because
 // branded Chrome ignores --load-extension. Firefox is the installed app. BiDi and CDP are
-// plain WebSockets, so this adds no dependencies.
+// plain WebSockets, so this adds no dependencies. crowd-check.mjs borrows the browser
+// parts, so they're exported and the run only starts when this file is run itself.
 import { spawn, execFileSync } from 'node:child_process';
 import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import http from 'node:http';
@@ -28,7 +29,7 @@ const FF_ID = 'hidetheslop@hidetheslop.com';
 const FF_UUID = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
 const only = process.argv[2]; // chrome or firefox, to run one
 
-function chromePath() {
+export function chromePath() {
   const root = join(homedir(), 'Library/Caches/ms-playwright');
   const dir = readdirSync(root).filter((d) => /^chromium-\d+/.test(d)).sort().pop();
   return join(root, dir, 'chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing');
@@ -36,7 +37,7 @@ function chromePath() {
 
 // ---- pictures -----------------------------------------------------------------
 
-function picture(width, height, seed) {
+export function picture(width, height, seed) {
   const rgb = Buffer.alloc(width * height * 3);
   const blocks = Array.from({ length: 24 }, (_, i) => {
     const r = (n) => ((seed * 7919 + i * 104729 + n * 1299709) % 1000) / 1000;
@@ -117,23 +118,26 @@ function startServer(fixtures) {
   return new Promise((resolve) => server.listen(0, '127.0.0.1', () => resolve({ server, log, port: server.address().port })));
 }
 
-// A copy of a build that can only reach this machine.
-function pointAtLocal(browser, port) {
+// A copy of a build that can only reach this machine. Both files that talk to the API,
+// votes.js and crowd.js, are pointed here.
+export function pointAtLocal(browser, port) {
   const dir = mkdtempSync(join(tmpdir(), `hts-${browser}-ext-`));
   cpSync(here(`../extension/dist/${browser}`), dir, { recursive: true });
-  const votesPath = join(dir, 'votes.js');
   const host = browser === 'firefox' ? 'api.hidetheslop.com' : '127.0.0.1';
-  const votes = readFileSync(votesPath, 'utf8')
-    .replace("const API = 'https://api.hidetheslop.com';", `const API = 'http://${host}:${port}';`)
-    .replace('const HOST_ACCESS = [`${API}/*`];', `const HOST_ACCESS = ['http://${host}/*'];`);
-  writeFileSync(votesPath, votes);
-  if (readFileSync(votesPath, 'utf8').includes('https://api.hidetheslop.com')) throw new Error('votes.js still points at the live API');
+  for (const file of ['votes.js', 'crowd.js']) {
+    const path = join(dir, file);
+    const source = readFileSync(path, 'utf8')
+      .replace("const API = 'https://api.hidetheslop.com';", `const API = 'http://${host}:${port}';`)
+      .replace('const HOST_ACCESS = [`${API}/*`];', `const HOST_ACCESS = ['http://${host}/*'];`);
+    writeFileSync(path, source);
+    if (readFileSync(path, 'utf8').includes('https://api.hidetheslop.com')) throw new Error(`${file} still points at the live API`);
+  }
   return dir;
 }
 
 // ---- two remote-control protocols, one shape ---------------------------------------
 
-function rpc(url, onEvent = () => {}) {
+export function rpc(url, onEvent = () => {}) {
   const ws = new WebSocket(url);
   let id = 0;
   const waiting = new Map();
@@ -160,7 +164,7 @@ const wrap = (expr) => `(async () => JSON.stringify(await (async () => (${expr})
 const rectOf = (selector) =>
   `(() => { const el = document.querySelector(${JSON.stringify(selector)}); el.scrollIntoView({ block: 'center' }); const r = el.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`;
 
-async function startFirefox(extension) {
+export async function startFirefox(extension) {
   const profile = mkdtempSync(join(tmpdir(), 'hts-firefox-'));
   const prefs = {
     'extensions.webextensions.uuids': JSON.stringify({ [FF_ID]: FF_UUID }),
@@ -214,13 +218,14 @@ async function startFirefox(extension) {
         ] }],
       });
     },
+    navigate: (url) => bidi.call('browsingContext.navigate', { context, url, wait: 'complete' }),
     hash: (url) => evaluate(`(await browser.runtime.getBackgroundPage()).SlopVision.hash(${JSON.stringify(url)})`),
     timeHash: (url) => evaluate(`(async () => { const bg = await browser.runtime.getBackgroundPage(); const t = bg.performance.now(); const h = await bg.SlopVision.hash(${JSON.stringify(url)}); return { ms: bg.performance.now() - t, h }; })()`),
     stop: () => bidi.close(),
   };
 }
 
-async function startChrome(extension) {
+export async function startChrome(extension) {
   const binary = chromePath();
   const profile = mkdtempSync(join(tmpdir(), 'hts-chrome-'));
   const proc = spawn(binary, [
@@ -262,6 +267,8 @@ async function startChrome(extension) {
       await cdp.call('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 });
       await cdp.call('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
     },
+    inOffscreen,
+    navigate: (url) => cdp.call('Page.navigate', { url }),
     hash: (url) => evaluate(`chrome.runtime.sendMessage({ target: 'offscreen', type: 'hash', url: ${JSON.stringify(url)} })`),
     timeHash: (url) => inOffscreen(`(async () => { const t = performance.now(); const h = await SlopVision.hash(${JSON.stringify(url)}); return { ms: performance.now() - t, h }; })()`),
     stop: () => {
@@ -272,7 +279,7 @@ async function startChrome(extension) {
 }
 
 // The whole process tree's resident memory, in MB.
-function treeMb(rootPid) {
+export function treeMb(rootPid) {
   const rows = execFileSync('ps', ['-axo', 'pid=,ppid=,rss='], { encoding: 'utf8' }).trim().split('\n').map((l) => l.trim().split(/\s+/).map(Number));
   const tree = new Set([rootPid]);
   for (let grew = true; grew; ) {
@@ -429,7 +436,7 @@ async function check(browser, ctx) {
 
 // ---- running it -----------------------------------------------------------------------
 
-async function finish(browser, extension) {
+export async function finish(browser, extension) {
   try { browser?.stop(); } catch { /* it's going away anyway */ }
   if (browser) {
     browser.proc.kill();
@@ -439,55 +446,59 @@ async function finish(browser, extension) {
   rmSync(extension, { recursive: true, force: true });
 }
 
-const fixtures = await makeFixtures();
-const { server, log, port } = await startServer(fixtures);
-const modelUrl = /MODEL_URL =\s*'([^']+)'/.exec(readFileSync(here('../extension/src/vision.js'), 'utf8'))[1];
-const ctx = {
-  log, port, modelUrl, ratingMs: {}, hashes: {}, posts: {}, cost: {},
-  hashFiles: ['shapes.png', 'photo.jpg', 'rotated.jpg', 'small.webp', 'feed-1mp.jpg', 'big-12mp.jpg', 'huge-36mp.jpg'],
-};
-const results = [];
-const failures = [];
-for (const [name, boot] of [['chrome', startChrome], ['firefox', startFirefox]]) {
-  if (only && only !== name) continue;
-  const extension = pointAtLocal(name, port);
-  let browser = null;
-  try {
-    browser = await boot(extension);
-    results.push(...(await check(browser, ctx)));
-  } catch (e) {
-    failures.push(`${name}: ${e.message}`);
-    console.log(`  FAIL  ${name} stopped: ${e.message}`);
-  } finally {
-    await finish(browser, extension);
+if (process.argv[1] === fileURLToPath(import.meta.url)) await main();
+
+async function main() {
+  const fixtures = await makeFixtures();
+  const { server, log, port } = await startServer(fixtures);
+  const modelUrl = /MODEL_URL =\s*'([^']+)'/.exec(readFileSync(here('../extension/src/vision.js'), 'utf8'))[1];
+  const ctx = {
+    log, port, modelUrl, ratingMs: {}, hashes: {}, posts: {}, cost: {},
+    hashFiles: ['shapes.png', 'photo.jpg', 'rotated.jpg', 'small.webp', 'feed-1mp.jpg', 'big-12mp.jpg', 'huge-36mp.jpg'],
+  };
+  const results = [];
+  const failures = [];
+  for (const [name, boot] of [['chrome', startChrome], ['firefox', startFirefox]]) {
+    if (only && only !== name) continue;
+    const extension = pointAtLocal(name, port);
+    let browser = null;
+    try {
+      browser = await boot(extension);
+      results.push(...(await check(browser, ctx)));
+    } catch (e) {
+      failures.push(`${name}: ${e.message}`);
+      console.log(`  FAIL  ${name} stopped: ${e.message}`);
+    } finally {
+      await finish(browser, extension);
+    }
   }
-}
-server.close();
-server.closeAllConnections();
+  server.close();
+  server.closeAllConnections();
 
-console.log('\n=== Requests, exactly as the server saw them');
-for (const [name, posts] of Object.entries(ctx.posts)) {
-  for (const post of posts) {
-    console.log(`\n--- ${name} POST ${post.path}`);
-    for (let i = 0; i < post.headers.length; i += 2) console.log(`${post.headers[i]}: ${post.headers[i + 1]}`);
-    const body = post.body.replace(/"vector":"([^"]{24})[^"]*"/g, '"vector":"$1…"');
-    console.log(`\n${body}`);
+  console.log('\n=== Requests, exactly as the server saw them');
+  for (const [name, posts] of Object.entries(ctx.posts)) {
+    for (const post of posts) {
+      console.log(`\n--- ${name} POST ${post.path}`);
+      for (let i = 0; i < post.headers.length; i += 2) console.log(`${post.headers[i]}: ${post.headers[i + 1]}`);
+      const body = post.body.replace(/"vector":"([^"]{24})[^"]*"/g, '"vector":"$1…"');
+      console.log(`\n${body}`);
+    }
   }
-}
 
-console.log('\n=== One file, each browser (hash)');
-const names = Object.keys(ctx.hashes);
-for (const file of ctx.hashFiles) {
-  const row = names.map((n) => ctx.hashes[n][file]);
-  const same = names.length === 2 ? (row[0] === row[1] ? 'SAME' : 'DIFFERENT') : '';
-  console.log(`${file.padEnd(16)} ${row.join('  ')}  ${same}`);
-  if (names.length === 2) results.push({ name: `hash ${file}`, pass: !!row[0] && row[0] === row[1] });
-}
-console.log('\n=== What a hash adds at rating time');
-console.log(JSON.stringify({ rating: ctx.ratingMs, hash: ctx.cost }, null, 1));
+  console.log('\n=== One file, each browser (hash)');
+  const names = Object.keys(ctx.hashes);
+  for (const file of ctx.hashFiles) {
+    const row = names.map((n) => ctx.hashes[n][file]);
+    const same = names.length === 2 ? (row[0] === row[1] ? 'SAME' : 'DIFFERENT') : '';
+    console.log(`${file.padEnd(16)} ${row.join('  ')}  ${same}`);
+    if (names.length === 2) results.push({ name: `hash ${file}`, pass: !!row[0] && row[0] === row[1] });
+  }
+  console.log('\n=== What a hash adds at rating time');
+  console.log(JSON.stringify({ rating: ctx.ratingMs, hash: ctx.cost }, null, 1));
 
-const failed = results.filter((r) => !r.pass);
-console.log(`\n${results.length - failed.length} of ${results.length} checks passed${failures.length ? `, ${failures.length} browser run(s) stopped` : ''}`);
-for (const f of failed) console.log(`FAILED: ${f.name}`);
-for (const f of failures) console.log(`STOPPED: ${f}`);
-process.exit(failed.length || failures.length ? 1 : 0);
+  const failed = results.filter((r) => !r.pass);
+  console.log(`\n${results.length - failed.length} of ${results.length} checks passed${failures.length ? `, ${failures.length} browser run(s) stopped` : ''}`);
+  for (const f of failed) console.log(`FAILED: ${f.name}`);
+  for (const f of failures) console.log(`STOPPED: ${f}`);
+  process.exit(failed.length || failures.length ? 1 : 0);
+}

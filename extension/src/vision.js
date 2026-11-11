@@ -24,6 +24,7 @@ var SlopVision = (() => {
   const STD = [0.26862954, 0.26130258, 0.27577711];
   const MAX_IMAGE_BYTES = 15 * 1024 * 1024;
   const METADATA_BYTES = 512 * 1024; // metadata lives at the start of the file
+  const MAX_HASH_PIXELS = 12e6;
 
   async function cached() {
     const cache = await caches.open(CACHE);
@@ -97,9 +98,11 @@ var SlopVision = (() => {
     return loading;
   }
 
-  // Same as CLIP's own preprocessing: shortest side to 224, centre crop, normalise.
+  // Same as CLIP's own preprocessing: shortest side to 224, centre crop, normalise. Also
+  // says how many pixels the picture has, which decides whether it gets hashed.
   async function toTensor(blob) {
     const bmp = await createImageBitmap(blob);
+    const pixels = bmp.width * bmp.height;
     const side = Math.min(bmp.width, bmp.height);
     const canvas = new OffscreenCanvas(SIZE, SIZE);
     const ctx = canvas.getContext('2d');
@@ -112,29 +115,51 @@ var SlopVision = (() => {
     for (let i = 0; i < plane; i++) {
       for (let c = 0; c < 3; c++) out[c * plane + i] = (data[i * 4 + c] / 255 - MEAN[c]) / STD[c];
     }
-    return new ort.Tensor('float32', out, [1, 3, SIZE, SIZE]);
+    return { tensor: new ort.Tensor('float32', out, [1, 3, SIZE, SIZE]), pixels };
+  }
+
+  // The hash decodes at full size, outside the model's worker. Two at once can reach
+  // about 320 MB on Firefox's background page, so they take turns.
+  let hashing = Promise.resolve();
+  function hashBlob(blob) {
+    const turn = hashing.then(async () => {
+      try {
+        return (await SlopHash.fromBlob(blob)).phash;
+      } catch {
+        return null;
+      }
+    });
+    hashing = turn;
+    return turn;
   }
 
   // Returns { meta, embedding } for the image at `url`, or null. `meta` is SlopMeta's
-  // verdict; `embedding` is 512 unit-length numbers.
-  async function inspect(url) {
+  // verdict; `embedding` is 512 unit-length numbers. With `hash`, while the crowd's list
+  // is in use, it adds `phash` from the same download: a hash or null. It's left out for a
+  // picture over 12 megapixels, which is too much memory to spend on every picture.
+  async function inspect(url, { hash = false } = {}) {
     const session = await load();
     const res = await fetch(url, { credentials: 'omit', cache: 'force-cache', signal: AbortSignal.timeout(15000) });
     if (!res.ok) return null;
     const blob = await res.blob();
     if (blob.size > MAX_IMAGE_BYTES || /^(text\/|application\/json)/.test(blob.type)) return null;
     const meta = SlopMeta.scan(new Uint8Array(await blob.slice(0, METADATA_BYTES).arrayBuffer()));
-    const { image_embeds } = await session.run({ pixel_values: await toTensor(blob) });
+    const { tensor, pixels } = await toTensor(blob);
+    const { image_embeds } = await session.run({ pixel_values: tensor });
     const v = image_embeds.data;
     let norm = 0;
     for (const x of v) norm += x * x;
     norm = Math.sqrt(norm);
-    return { meta, embedding: Array.from(v, (x) => x / norm) };
+    const out = { meta, embedding: Array.from(v, (x) => x / norm) };
+    if (hash && typeof SlopHash !== 'undefined' && /^https?:/.test(url) && pixels <= MAX_HASH_PIXELS) {
+      out.phash = await hashBlob(blob);
+    }
+    return out;
   }
 
   // The perceptual hash a shared rating needs, or null. It's a second look at a picture
-  // you just rated, so only do this when a vote is about to be queued: it decodes at
-  // full size. The options and welcome pages load this file without phash.js.
+  // you just rated, for when inspect() didn't hash it: it decodes at full size. The
+  // options and welcome pages load this file without phash.js.
   async function hash(url) {
     if (typeof SlopHash === 'undefined') return null;
     try {
@@ -142,7 +167,7 @@ var SlopVision = (() => {
       if (!res.ok) return null;
       const blob = await res.blob();
       if (blob.size > MAX_IMAGE_BYTES || /^(text\/|application\/json)/.test(blob.type)) return null;
-      return (await SlopHash.fromBlob(blob)).phash;
+      return await hashBlob(blob);
     } catch {
       return null;
     }

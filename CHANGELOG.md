@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.9.0
+- **Pictures the crowd flagged get hidden.** While your robot is on, the extension downloads the list of pictures that people who share their ratings confirmed as AI, every 6 hours, and hides any picture that matches, with a bar saying the crowd flagged it. This is on for people updating from 1.8.0 too. Everyone downloads the same list and matching happens on your computer, so nothing about what you look at is sent. The server and Cloudflare see your IP address while the list downloads. **Hide pictures the crowd flagged** in Settings turns it off and deletes the list, and so does turning your robot off.
+- A picture you rated **Not AI** is never hidden by the crowd, even a copy of it at another address. Your answers are kept for that, shared or not, and **Forget them** clears them with your ratings.
+- Your robot fingerprints each picture it already downloads, so a match costs no extra download: about 10 ms more per feed picture, and pictures over 12 megapixels are skipped. A shared rating now reuses that fingerprint instead of fetching the picture again.
+- On Firefox, the rule that takes the extension's own address off requests to the API now covers the list download too.
+- The privacy policy, README and Settings say what's downloaded.
+
 ## 1.8.0
 - You can share your ratings with other people, in Settings or on the welcome page. It's off until you turn it on, on each browser separately. A rating you make while it's on sends a hash of the picture, your answer and a per-picture code, hours later and at most 5 at a time. The picture, its address and anything about you are never sent. Ratings from before you turned it on stay on your computer. See the privacy policy.
 - Settings shows how many ratings are waiting, with a **Send now** link. Turning sharing off clears them, and so does forgetting your ratings.

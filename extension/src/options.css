@@ -17,6 +17,7 @@ h1 { flex: 1; min-width: 0; font-size: clamp(46px, 9vw, 76px); }
 .row small { display: block; color: var(--muted); font-size: 15px; line-height: 1.5; margin-top: 3px; }
 .row .status { color: var(--red); font-weight: 600; }
 .row .status:empty { display: none; }
+.row .status.calm { color: var(--ink); font-weight: 400; } /* news, not a warning */
 .row input[type=radio] { flex: none; width: 20px; height: 20px; margin: 4px 0 0; accent-color: var(--red); }
 
 .row.slider { align-items: center; cursor: default; }

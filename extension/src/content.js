@@ -486,6 +486,9 @@
       if (!r || !active()) return;
       if (r.meta && (r.meta.ai || (r.meta.edited && settings.includeEdited))) {
         hideForImage(img, r.meta.reason.toLowerCase());
+      } else if (r.crowd) {
+        // Confirmed by people who share their ratings, so your robot's score doesn't matter.
+        hideForImage(img, 'the crowd flagged it');
       } else if (r.score != null && r.score >= settings.visualCutoff) {
         hideForImage(img, 'the picture looks AI-made');
       }
