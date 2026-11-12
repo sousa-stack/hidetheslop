@@ -57,6 +57,8 @@ jobs:
   deploy:
     needs: test
     if: vars.DEPLOY_ENABLED == 'true' && github.ref == 'refs/heads/main'
+    # The deploy secrets live in this environment, which only main can use.
+    environment: production
     runs-on: ubuntu-latest
     steps:
       # ssh-action skips host key checking when the fingerprint is empty.
@@ -75,4 +77,6 @@ jobs:
           username: deploy
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           fingerprint: ${{ secrets.DEPLOY_HOST_FINGERPRINT }}
+          # Ignored: the droplet's authorized_keys forces this key to run deploy.sh and
+          # nothing else. ssh-action still wants a script, so it says what runs.
           script: ~/hidetheslop/deploy.sh main

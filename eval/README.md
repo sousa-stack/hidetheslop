@@ -8,7 +8,7 @@ npm install         # onnxruntime-node and sharp, about 490 MB
 ./get-models.sh     # the CLIP models, about 380 MB, into models/
 ```
 
-The example pictures are in `../test-images/ai` and `../test-images/real`. They're kept out of git because they're real people's posts.
+The example pictures are in `../test-images/ai` and `../test-images/real`. They're kept out of git because they're real people's posts, so the numbers below can't be reproduced from a clone of this repo.
 
 | Script | What it does |
 |---|---|

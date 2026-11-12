@@ -105,10 +105,12 @@ The extension's conventions above don't apply here: `api/` is TypeScript with a 
 - The Cloudflare connector can read the account and search the docs, but it can't change DNS, deploy, or connect domains.
 - This Mac runs Docker through Colima, and `docker compose` is the Homebrew plugin. Other projects' containers run here too, so test the stack with `scripts/local-stack.sh`, and never run `deploy.sh` or `docker image prune` in this checkout.
 
-Once the droplet exists:
+On the droplet:
 
-- The host is the `DEPLOY_HOST` GitHub secret, the user is `deploy`, and the app directory is `~/hidetheslop`.
-- Pushing API or infra changes to `main` tests them, and deploys once the `DEPLOY_ENABLED` repo variable is `true`. Don't SSH in to fix something that should be a commit.
+- The host is the `DEPLOY_HOST` secret, the user is `deploy`, and the app directory is `~/hidetheslop`.
+- **Pushing API or infra changes to `main` deploys them.** The workflow tests first, then deploys, because `DEPLOY_ENABLED` is `true`. Its secrets live in the `production` environment, which only `main` can use. Don't SSH in to fix something that should be a commit.
+- GitHub Actions' key is restricted in the droplet's `authorized_keys` to running `deploy.sh main` and nothing else, so it can't open a shell. The droplet reads the repo with its own read-only key, `~/.ssh/id_ed25519_hidetheslop_repo`, set for `github.com` in `~/.ssh/config`.
+- Commits use this repo's own `user.email`, GitHub's no-reply address for `sousa-stack`, so no personal address reaches the public history. History was rewritten once, on 2026-11-12, to remove one. Never rewrite it again now it's public.
 - `~/hidetheslop/deploy.sh main` deploys, and rolls the code back if the health check fails.
 - Logs: `docker compose logs --tail=200 api`. Status: `docker compose ps`, `docker stats --no-stream`, `df -h`. Database shell: `docker compose exec db sh -c 'psql -U "$POSTGRES_USER" "$POSTGRES_DB"'`.
 - **Fine without asking:** reading logs, `docker compose ps`, restarting `api`, running `deploy.sh`, read-only SQL (`SELECT`), and `docker compose exec -T api node dist/block.js list`.

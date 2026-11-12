@@ -22,7 +22,7 @@ Without the picture check, an AI image with its metadata stripped that nobody la
 
 Turning it on downloads an 89 MB model (OpenAI's CLIP ViT-B/32, the int8 ONNX copy at `Xenova/clip-vit-base-patch32`) once, from this project's copy on Cloudflare or from Hugging Face. The download is pinned to one revision and checked against a SHA-256 hash. It runs on your computer in WebAssembly, about a quarter second per picture. CLIP turns each picture into 512 numbers, and a small classifier (`extension/src/vision-weights.json`) decides from those whether it looks AI-made. That classifier was trained on hand-sorted examples of real Facebook slop and real posts. **How sure before hiding** in Settings sets the cutoff (default 70%). Videos always need at least 90%, because the classifier was trained on still images.
 
-Ready-made AI-image detectors did badly on flyers: one flagged half the human-made flyers, another missed half the AI ones. The comparison is in `eval/`.
+Ready-made AI-image detectors did badly on flyers: one flagged half the human-made flyers, another missed half the AI ones. The comparison is in `eval/`. Its accuracy numbers come from example pictures that stay private, because they're real people's posts, so they can't be reproduced from a clone of this repo.
 
 ### Teaching it
 
@@ -88,7 +88,7 @@ Paths below are inside `extension/` unless they start with `eval/`.
 
 When a site changes its layout, update its entry in `SITES` at the top of `src/content.js`.
 
-Working on the code, or an AI agent picking it up? Start with [CLAUDE.md](CLAUDE.md), then [docs/](docs/): architecture, testing, and the roadmap. What changed in each version is in [CHANGELOG.md](CHANGELOG.md).
+Found a security problem? See [SECURITY.md](SECURITY.md). Working on the code, or an AI agent picking it up? Start with [CLAUDE.md](CLAUDE.md), then [docs/](docs/): architecture, testing, and the roadmap. What changed in each version is in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 

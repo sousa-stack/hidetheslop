@@ -1,0 +1,11 @@
+# Alerts alone don't update the actions pinned by SHA in the workflow, so this does.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: npm
+    directory: /api
+    schedule:
+      interval: weekly
