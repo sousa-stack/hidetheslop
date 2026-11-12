@@ -20,7 +20,6 @@ var SlopVotes = (() => {
   const MAX_BATCH = 5; // small, because CROWD-API.md says xmin can group what arrives together
   const MAX_SENT = 5000;
   const SAME_PICTURE_BITS = 3; // the same limit the server merges at
-  const TIMEOUT_MS = 15000;
   const HOUR = 60 * 60 * 1000;
   const ALARM = 'send-votes';
   const STOP_AFTER = 3; // batches refused in a row, before you get told to update
@@ -173,12 +172,14 @@ var SlopVotes = (() => {
   // ---- sending ------------------------------------------------------------
 
   // On Firefox, a request that could carry the install's own moz-extension address must
-  // not go out, so the rule that strips it has to be on as well.
+  // not go out, so the rule that strips it has to be on as well. Safari's has to be proven
+  // gone in this run (slopStripReady in common.js).
   async function allowed() {
     try {
       const { permissions, declarativeNetRequest } = SLOP_API;
       if (!(await slopGetShare())) return false;
       if (!(await permissions.contains({ origins: HOST_ACCESS }))) return false;
+      if (slopIsSafari()) return await slopStripReady();
       if (!slopIsFirefox()) return true;
       if (!(await permissions.contains({ data_collection: ['websiteContent'] }))) return false;
       return (await declarativeNetRequest.getEnabledRulesets()).includes('strip-origin');
@@ -192,7 +193,7 @@ var SlopVotes = (() => {
   async function post(path, body) {
     if (!(await allowed())) return null;
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+    const timer = setTimeout(() => ctrl.abort(), slopRequestTimeout());
     aborts.add(ctrl);
     try {
       const res = await fetch(API + path, {

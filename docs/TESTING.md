@@ -7,7 +7,10 @@ Run the quick checks after every change, and the real-browser checks after anyth
 ```bash
 cd extension && node build.mjs && node --test test/meta.test.mjs test/download.test.mjs test/phash.test.mjs test/votes.test.mjs test/crowd.test.mjs
 for f in src/*.js; do node --check "$f"; done
+cd ../site && node build.mjs && node --test worker.test.mjs
 ```
+
+`site/worker.test.mjs` runs Safari's origin check (`site/worker.js`) with Node's own `Request`: extension Origins of every scheme read as arrived, none or `null` as not, the value is never sent back, nothing is cached or logged, and every other path is the static site. To run the real Worker locally: `npx --offline wrangler@4.156.0 dev --local --ip 127.0.0.1 --port 8793`, adding `--compatibility-date` with the newest date the local runtime supports if it refuses, then `curl -H 'Origin: safari-web-extension://x' http://127.0.0.1:8793/.well-known/origin-check`.
 
 ## The API
 
@@ -46,6 +49,8 @@ cd api && ./scripts/test-docker.sh
 - **Caddy:** `docker run --rm -v "$PWD/Caddyfile:/etc/caddy/Caddyfile:ro" -e ACME_EMAIL=a@example.com caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile`.
 - **The image:** `docker build -t hidetheslop-api:local api`, then run it with `--read-only --tmpfs /tmp` against a temporary `postgres:18-alpine`. Run `node dist/migrate.js` in it, and check `http://127.0.0.1:3000/health` with busybox `wget` inside the container.
 - **No IPs in Caddy's logs:** take a copy of the `Caddyfile`, add a site that reverse-proxies to a dead port, send it a request, and check that the logs have no `client_ip`. Do the same with the `log default` block removed, which should log it, so you know the check works. Start Caddy with `--network none`, or the real sites will ask Let's Encrypt for certificates. On Colima, only your home folder can be bind-mounted, so use `docker create`, `docker cp` and `docker start` for a config kept anywhere else.
+
+- **Caddy drops Origin:** run a copy of the generated local Caddyfile with `api:3000` swapped for a tiny Node server that echoes the headers it got, on its own Docker network, and send a POST and a GET with `Origin: safari-web-extension://x`. The echo must show no `origin`. Then delete the `header_up -Origin` line, reload, and see the Origin come back, so you know the check works.
 
 `harden.sh` needs a droplet, so here it only gets `bash -n`. `deploy.sh`, `backup.sh` and `restore.sh` run for real in the next section.
 
@@ -102,6 +107,8 @@ Open `http://localhost:8767/extension/test/harness.html` and read each post's `d
 ## The vote client: `extension/test/votes.test.mjs`
 
 This runs the real `votes.js` with fake storage and a fake network, so nothing reaches the API. It covers the token against a vector worked out with Python's `hmac`, off meaning off, the queue, every reply, races, near copies, and that nothing but the agreed fields goes in a body. The last two tests read `api/src/` and the build, and fail if the schema or the manifest moves.
+
+Safari's tests use a manifest with `browser_specific_settings.safari` and a fake origin check: the rule is switched off and on, then a GET and a POST check it, once per run; an extension Origin, a bad or missing answer, or no access to either host sends nothing; and Chrome and Firefox never send the check or touch the rulesets.
 
 ## The crowd's list: `extension/test/crowd.test.mjs`
 
@@ -230,6 +237,16 @@ The check opens in its own tab and says Done after about a minute. Remove the ex
 ## Settings page: `extension/test/options-preview.html`
 
 This shows the real `options.html` with faked APIs and sample data, and always loads fresh CSS and JS. Add `?empty` to see a fresh install. Add `?page=welcome` or `?page=popup` for those pages. For sharing, `?share` turns it on with 7 ratings waiting, `&stuck` is a server that keeps refusing them, `&nosend` is one that can't be reached, and `?firefox&refuse` is Firefox saying no when you click the switch. `&crowdoff` turns off the crowd's list, which otherwise shows 37 made-up pictures, and `&robotoff` turns your robot off. For the popup, `&unreached` shows a tab that needs a reload and `&blocked` shows a browser page. The model download is always faked here, and adding `&empty&fail` makes it fail. Use it for any design work, and check phone width with both pages. The website is in `site/`: run `node build.mjs` there and open `site/dist/index.html` from the same server. Hovering in a hidden in-app browser pane is unreliable, so check the welcome page's hover demo with the pane showing. Kevin reviews design changes there in the in-app browser pane. These pages ignore dark mode on purpose.
+
+## Safari
+
+Safari runs the same code as Firefox, so the tests above cover most of it. What only Safari can show needs Safari itself and Kevin's clicks, because an agent can't tick an extension on in Safari's settings or grant it site access.
+
+- **Build and sign:** `cd safari && xcodebuild -project "Hide the Slop.xcodeproj" -scheme "Hide the Slop" -configuration Debug -derivedDataPath build CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY="Apple Development" PROVISIONING_PROFILE_SPECIFIER= clean build`, with your team ID in `safari/Local.xcconfig`. Then `codesign --verify --deep --strict` on `build/Build/Products/Debug/Hide the Slop.app`, and check that the extension's `Contents/Resources` is identical to `extension/dist/safari`. Opening the app registers its extension with Safari; `pluginkit -r` on the `.appex` unregisters it.
+  Always `clean build`: after a change to the JavaScript alone, an incremental build doesn't re-sign the extension, and `codesign --verify` fails.
+- **Loading without Xcode:** Safari → Settings → Advanced → **Show features for web developers**, then Developer → **Allow unsigned extensions** and **Add Temporary Extension…**, and pick `extension/dist/safari`. Safari removes it when it quits, and the unsigned setting resets too.
+- **The release gate** (`.local/safari-spike/gate/`, not in git, with Kevin's steps in `.local/safari-spike/PHASE2-STEPS.md`): `build-gate.sh` builds the real Xcode project around a copy of the real `dist/safari` with the API at `http://127.0.0.1:8791` and the origin check at `http://localhost:8791`, two hosts and two rules as in production, under the bundle ID `com.hidetheslop.gate`, so nothing it turns on reaches a real install. `gate-server.mjs` records every request to either host with its headers as they arrived, answers the origin check with the real `site/worker.js`, and serves the model, the spike's 224 score-check pictures and two drawn pictures. The probe reports what `slopIsSafari()` sees, site access, the ruleset after re-arming, a vote-shaped POST and a list-shaped GET sent past `allowed()` with and without site access, the real canary, the robot's scores (`flips: 0` is the bar), the real list download and a crowd match hiding on a page, a real vote, and what `openOptionsPage()` does. Nothing ships to anyone until a run shows no extension Origin from the canary or the real senders, including after a fresh start of the background.
+- **Real Facebook,** last: per-site access, injection on a cold start, bars, the hover button, and memory after an hour, with Safari's Activity Monitor processes as in the spike.
 
 ## The installed extension in Kevin's real Chrome
 

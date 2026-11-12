@@ -21,7 +21,6 @@ var SlopCrowd = (() => {
   const PERIOD_MINUTES = 360; // the server publishes hourly and the list is cached an hour
   const STALE = 6 * HOUR;
   const RESYNC = 7 * 24 * HOUR;
-  const TIMEOUT_MS = 15000;
   const MAX_PAGES = 5; // 10,000 entries a page, well past MAX_HASHES
   const MAX_HASHES = 20000; // storage.local holds 10 MB, and your ratings need most of it
   const MAX_OWN = 2000;
@@ -153,11 +152,13 @@ var SlopCrowd = (() => {
   }
 
   // On Firefox the strip rule must be on, or the GET could carry the install's own
-  // moz-extension address. Unlike a vote, this needs no sharing and no data permission.
+  // moz-extension address, and on Safari it must be proven to work in this run (common.js).
+  // Unlike a vote, this needs no sharing and no data permission.
   async function listAllowed() {
     try {
       const { permissions, declarativeNetRequest } = SLOP_API;
       if (!(await permissions.contains({ origins: HOST_ACCESS }))) return false;
+      if (slopIsSafari()) return await slopStripReady();
       if (!slopIsFirefox()) return true;
       return (await declarativeNetRequest.getEnabledRulesets()).includes('strip-origin');
     } catch {
@@ -180,7 +181,7 @@ var SlopCrowd = (() => {
   const aborts = new Set();
   async function getPage(since) {
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+    const timer = setTimeout(() => ctrl.abort(), slopRequestTimeout());
     aborts.add(ctrl);
     try {
       // Everyone asks for the same pages, with nothing of their own, which is what lets

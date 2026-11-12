@@ -15,8 +15,13 @@ async function save(patch) {
 }
 
 async function checkPermission() {
-  const ok = await api.permissions.contains({ origins: SLOP_ORIGINS }).catch(() => true);
-  $('perm').hidden = ok;
+  $('perm').hidden = await slopCanSeeSites();
+  // Safari doesn't let an extension ask for every site, so the button would do nothing there.
+  // Show Safari's own steps instead.
+  if (slopIsSafari()) {
+    $('grant').hidden = true;
+    $('permHelp').hidden = false;
+  }
 }
 
 (async () => {
@@ -216,7 +221,9 @@ async function checkPermission() {
 
   $('grant').addEventListener('click', async () => {
     await api.permissions.request({ origins: SLOP_ORIGINS }).catch(() => {});
-    checkPermission();
+    await checkPermission();
+    // Safari may not grant every site from here, so say where its own switch is.
+    $('permHelp').hidden = $('perm').hidden || !slopIsSafari();
   });
   checkPermission();
 })();

@@ -1,0 +1,4 @@
+// Copy to Local.xcconfig, which git ignores, and put your Apple Developer team ID in it.
+// It's the 10 characters after your name in Keychain Access, or in
+// `security find-identity -v -p codesigning`.
+DEVELOPMENT_TEAM = ABCDE12345

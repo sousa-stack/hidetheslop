@@ -3,6 +3,8 @@ test-images/
 
 # Secrets
 .env
+# Kevin's Apple team ID, which Xcode reads through safari/Shared.xcconfig.
+safari/Local.xcconfig
 
 # Downloaded or generated
 node_modules/
@@ -15,6 +17,9 @@ eval/hash-results/
 extension/dist/
 site/dist/
 api/dist/
+safari/build/
+xcuserdata/
+DerivedData/
 
 .DS_Store
 .claude/

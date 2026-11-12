@@ -1,9 +1,18 @@
 {
-  // hidetheslop.com. A plain static site: no Worker script runs, so requests are free.
+  // hidetheslop.com. A static site: the pages are served from assets without running any
+  // script, so they're free. worker.js runs first only for /.well-known/origin-check, the
+  // Safari build's check that its Origin is stripped, and otherwise only for a 404. Nothing
+  // it sees is logged.
   // Build first with: node build.mjs
   "name": "hidetheslop-site",
+  "main": "worker.js",
   "compatibility_date": "2026-11-01",
-  "assets": { "directory": "./dist" },
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    "run_worker_first": ["/.well-known/origin-check"]
+  },
+  "observability": { "enabled": false },
   "routes": [
     { "pattern": "hidetheslop.com", "custom_domain": true },
     { "pattern": "www.hidetheslop.com", "custom_domain": true }

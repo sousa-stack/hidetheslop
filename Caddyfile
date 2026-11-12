@@ -34,9 +34,12 @@ api.hidetheslop.com {
     }
 
     # Without header_up, X-Forwarded-For ends in Cloudflare's edge IP, the API picks that,
-    # and everyone behind one edge shares a rate limit.
+    # and everyone behind one edge shares a rate limit. Origin goes, because Firefox and
+    # Safari can put an install's own random address in it. The extension strips it too;
+    # this is the backstop, so the API never sees one from any browser.
     reverse_proxy api:3000 {
         header_up X-Forwarded-For {client_ip}
+        header_up -Origin
     }
 }
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.10.0
+- **Safari on the Mac,** for Safari 27.2 and later, from the same code as Chrome and Firefox. It runs your robot the way Firefox does, on the background page. It comes inside a small Mac app (`safari/`), whose one window tells you how to turn it on. Not released yet: it waits for a test run in a real Safari.
+- In Safari, before the first rating or list download each time its background starts, the extension checks that Safari's per-install address really was taken off its requests, with two empty requests to a new address on hidetheslop.com that answers only whether one arrived. If it did, nothing is sent until the next start. Chrome and Firefox don't send it. The privacy policy says so.
+- The notice when the extension can't see any pages says **Allow on all websites** in every browser, and in Safari points to Safari's own Websites setting if the button doesn't take. Safari grants access site by site, so a failed check there counts as no access.
+
+None of the rest shows up in the extension:
+- The API's Caddy drops the `Origin` header from every request, so the API never sees an extension's address from any browser, whatever the extension does.
+- `site/worker.js` answers Safari's check at `hidetheslop.com/.well-known/origin-check` and nothing else: every page is still served without running a script, and the Worker's logs are off.
+- `node build.mjs safari` builds one browser, and the Safari build has no zip, because Xcode builds the app.
+
 ## 1.9.0
 - **Pictures the crowd flagged get hidden.** While your robot is on, the extension downloads the list of pictures that people who share their ratings confirmed as AI, every 6 hours, and hides any picture that matches, with a bar saying the crowd flagged it. This is on for people updating from 1.8.0 too. Everyone downloads the same list and matching happens on your computer, so nothing about what you look at is sent. The server and Cloudflare see your IP address while the list downloads. **Hide pictures the crowd flagged** in Settings turns it off and deletes the list, and so does turning your robot off.
 - A picture you rated **Not AI** is never hidden by the crowd, even a copy of it at another address. Your answers are kept for that, shared or not, and **Forget them** clears them with your ratings.

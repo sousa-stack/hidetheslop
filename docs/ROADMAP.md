@@ -15,9 +15,10 @@ Updated 2026-11-01. Start here.
 - The API at `api.hidetheslop.com` and the status page at `status.hidetheslop.com`, on the droplet behind Cloudflare. Checked live: direct access is blocked, input rules and rate limits work, verdicts are cached, and no client IPs are in the logs. It holds Kevin's test votes and its first published verdict.
 
 **Built, not live:**
-- The extension, version 1.8.0, with voting built and off by default. Not in any store. Tested for real on 2026-11-11: votes from Chrome, Firefox, Arc and second profiles, Firefox's own consent prompt, an embedding sent once a picture reached 3 installs, and one AI picture reaching 5 installs, confirmed and published in `/v1/verdicts` through Cloudflare. All five installs gave that picture the identical hash.
+- The extension, version 1.9.0: voting, off by default, and hiding pictures the crowd flagged, on by default. Not in any store. Tested for real on 2026-11-11: votes from Chrome, Firefox, Arc and second profiles, Firefox's own consent prompt, an embedding sent once a picture reached 3 installs, and one AI picture reaching 5 installs, confirmed and published in `/v1/verdicts` through Cloudflare. All five installs gave that picture the identical hash.
 - Deploys from GitHub, which stay off until the secrets are added.
 - The production stack, proven on this Mac by `scripts/local-stack.sh`: 30 checks through the real Compose file and a Caddyfile generated from the real one, including `deploy.sh` rollback and an encrypted backup and restore.
+- Safari on the Mac, version 1.10.0, built on 2026-11-11 from `docs/plans/2026-11-11-safari.md`: a `safari` build target, the Mac app in `safari/` (builds and signs with Kevin's Apple Development identity), the origin check on the website, and Caddy dropping `Origin`. The website route and the Caddyfile aren't deployed. Waiting on the release gate in a real Safari, with Kevin's clicks (`.local/safari-spike/PHASE2-STEPS.md`), then real Facebook.
 - Verdict downloads, version 1.9.0, built on 2026-11-11 and tested in headless Chrome and Firefox against a local list (`eval/crowd-check.mjs`). Never loaded by Kevin, and never run against the live list.
 
 **Never run for real:**
@@ -36,12 +37,12 @@ Updated 2026-11-01. Start here.
 2. **The droplet (item 20).** The stack is proven locally, so follow the going-live checklist in CROWD-API.md.
 3. **Voting in the extension (item 18).** Build it and test it on Kevin's two laptops with a manual install, because every store update can wait days for review. Once it works there, submit unlisted to Chrome and Firefox, to prove the real install and update path and start the review early. See "Installing before launch". Update the privacy policy and the Firefox data permission first, and turn on no sharing for anyone before the policy says what's sent. The policy must also name Cloudflare R2 as where encrypted backups are kept, and say how long: 14 nights on the droplet, 30 days in R2, plus droplet backups.
 4. **Test with real data.** Kevin votes on real feeds from two laptops with different accounts. Confirm votes arrive, the aggregate job runs, verdicts publish, and the rules in the promises section of CROWD-API.md hold on the live server: no IPs in logs, lone hashes expire. Restore a backup to prove it works, and load-test the votes route.
-5. **Verdict downloads (item 19).** Built in 1.9.0. Still to do: deploy the privacy policy, load the build, and confirm the picture confirmed on 2026-11-11 is hidden on Facebook in an install that never rated it.
-6. **Safari (item 23),** so it launches with the other browsers.
+5. **Verdict downloads (item 19).** Done in 1.9.0. On 2026-11-11 a fresh Chrome profile that never rated the confirmed picture downloaded the list and hid it on Facebook.
+6. **Safari (item 23).** Built as 1.10.0 on the background page with the proxy worker, Firefox's path. Proven in Safari 27.2: scores match the Mac, Safari's extension Origin is stripped once site access is granted (checked by a canary first), the crowd list hides and votes send. On real Facebook it hides about as fast as Chrome. Still to do: deploy the site's `origin-check` route and the Caddyfile backstop, a real Safari vote, and getting it to testers. The details are in `docs/plans/2026-11-11-safari.md`.
 7. **The launch list below,** then the "Going public" list, then the store listings.
 
 **Open questions for Kevin:**
-- Is the Safari app free, or the paid iPhone idea from earlier? Kevin already has an Apple developer account, so the $99 fee no longer needs covering.
+- Settled on 2026-11-11: the Safari app is free on the Mac, as `com.hidetheslop.app`, with the team ID kept out of git and Safari 27.2 as the minimum.
 
 **Votes during testing:** the threshold counts installs, not people. Two laptops with Chrome and Firefox, plus a second Chrome profile on one of them, make 5 installs, so it can stay at 5. `CONFIRM_MIN_VOTES` can lower it if that gets tedious, with a warning in the logs, and no verdicts are seeded. This proves the pipeline, not how good the crowd's judgment is.
 

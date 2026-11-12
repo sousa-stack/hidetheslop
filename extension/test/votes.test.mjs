@@ -29,8 +29,9 @@ const bump = (h, flips) => {
 };
 
 // A fresh SlopVotes. `reply(path, body)` answers each fetch, or throws for a network
-// failure. `start` also runs its listeners and returns them.
-function setup({ on = true, reply, local: seed = {}, firefox = false, perms = {}, start = false } = {}) {
+// failure. `start` also runs its listeners and returns them. With `safari`, `canary(method)`
+// answers the origin check on the website, and `canaries` and `rulesetCalls` record it.
+function setup({ on = true, reply, local: seed = {}, firefox = false, safari = false, canary, perms = {}, start = false } = {}) {
   const local = { ...(on ? { shareRatings: true } : {}), ...seed };
   const requests = [];
   const listeners = { changed: [], alarm: [], removed: [] };
@@ -53,7 +54,9 @@ function setup({ on = true, reply, local: seed = {}, firefox = false, perms = {}
       for (const k of [].concat(keys)) delete local[k];
     },
   };
-  const access = { origins: true, data: true, rules: ['strip-origin'], ...perms };
+  const access = { origins: true, data: true, site: true, rules: ['strip-origin'], ...perms };
+  const canaries = [];
+  const rulesetCalls = [];
   const chrome = {
     storage: { local: area, onChanged: { addListener: (l) => listeners.changed.push(l) } },
     alarms: {
@@ -62,13 +65,31 @@ function setup({ on = true, reply, local: seed = {}, firefox = false, perms = {}
       onAlarm: { addListener: (l) => listeners.alarm.push(l) },
     },
     permissions: {
-      contains: async (q) => (q.origins ? access.origins : access.data),
+      contains: async (q) => {
+        if (!q.origins) return access.data;
+        return access.origins && (!q.origins.includes('https://hidetheslop.com/*') || access.site);
+      },
       onRemoved: { addListener: (l) => listeners.removed.push(l) },
     },
-    declarativeNetRequest: { getEnabledRulesets: async () => access.rules },
-    runtime: { getManifest: () => (firefox ? { browser_specific_settings: { gecko: {} } } : {}) },
+    declarativeNetRequest: {
+      getEnabledRulesets: async () => access.rules,
+      updateEnabledRulesets: async (change) => {
+        rulesetCalls.push(JSON.parse(JSON.stringify(change))); // out of the vm's realm
+        access.rules = access.rules.filter((id) => !(change.disableRulesetIds || []).includes(id));
+        for (const id of change.enableRulesetIds || []) if (!access.rules.includes(id)) access.rules.push(id);
+      },
+    },
+    runtime: {
+      getManifest: () => (firefox ? { browser_specific_settings: { gecko: {} } } : safari ? { browser_specific_settings: { safari: {} } } : {}),
+    },
   };
   const fetch = async (url, init) => {
+    if (url === 'https://hidetheslop.com/.well-known/origin-check') {
+      const method = init.method || 'GET';
+      canaries.push({ method, init });
+      const answer = await (canary ?? (() => ({ status: 200, json: { extension: false } })))(method);
+      return { status: answer.status, text: async () => answer.text ?? JSON.stringify(answer.json) };
+    }
     const path = new URL(url).pathname;
     const body = JSON.parse(init.body);
     requests.push({ url, path, init, body, raw: init.body });
@@ -84,7 +105,7 @@ function setup({ on = true, reply, local: seed = {}, firefox = false, perms = {}
   vm.runInContext(readFileSync(here('../src/votes.js'), 'utf8'), ctx);
   const votes = vm.runInContext('SlopVotes', ctx);
   if (start) votes.start();
-  return { votes, local, requests, listeners, alarms, ctx };
+  return { votes, local, requests, listeners, alarms, ctx, canaries, rulesetCalls };
 }
 
 const ok = (_path, body) => ({ status: 202, json: { accepted: (body.votes || body.items).length, needEmbedding: [] } });
@@ -264,6 +285,104 @@ test('Chrome needs site access too, and no Firefox checks', async () => {
   await rate(fine.votes, 0);
   await fine.votes.run({ now: true });
   assert.equal(fine.requests.length, 1);
+});
+
+test('Chrome and Firefox never send the origin check or touch the rulesets', async () => {
+  for (const firefox of [false, true]) {
+    const { votes, requests, canaries, rulesetCalls, ctx } = setup({ firefox, start: true });
+    await vm.runInContext('slopArmStrip()', ctx);
+    assert.equal(await vm.runInContext('slopStripReady()', ctx), true);
+    await rate(votes, 0);
+    await votes.run({ now: true });
+    assert.equal(requests.length, 1);
+    assert.equal(canaries.length, 0);
+    assert.equal(rulesetCalls.length, 0);
+  }
+});
+
+// ---- Safari: the Origin strip has to be proven in each run of the background ------------
+
+test('Safari: the rule is switched off and on, then a GET and a POST check it, once a run', async () => {
+  const { votes, requests, canaries, rulesetCalls } = setup({ safari: true });
+  await rate(votes, 0);
+  await rate(votes, 1);
+  await votes.run({ now: true });
+  assert.deepEqual(rulesetCalls, [{ disableRulesetIds: ['strip-origin'] }, { enableRulesetIds: ['strip-origin'] }]);
+  assert.deepEqual(canaries.map((c) => c.method), ['GET', 'POST']);
+  assert.deepEqual(requests.map((r) => r.path), ['/v1/votes']);
+  await rate(votes, 2);
+  await votes.run({ now: true });
+  assert.equal(canaries.length, 2, 'not again in the same run');
+  assert.equal(rulesetCalls.length, 2);
+  assert.equal(requests.length, 2);
+});
+
+test('Safari: the check is shaped like a list download and a vote, and carries nothing', async () => {
+  const { votes, canaries } = setup({ safari: true });
+  await rate(votes, 0);
+  await votes.run({ now: true });
+  const [get, post] = canaries.map((c) => c.init);
+  for (const init of [get, post]) {
+    assert.equal(init.credentials, 'omit');
+    assert.equal(init.referrerPolicy, 'no-referrer');
+    assert.equal(init.redirect, 'error');
+    assert.equal(init.cache, 'no-store');
+  }
+  assert.equal(get.body, undefined);
+  assert.equal(post.method, 'POST');
+  assert.deepEqual({ ...post.headers }, { 'content-type': 'application/json' });
+  assert.equal(post.body, '{}');
+});
+
+test('Safari: an extension Origin arriving, or a failed check, keeps everything off for the run', async () => {
+  const answers = [
+    () => ({ status: 200, json: { extension: true } }),
+    (m) => ({ status: 200, json: { extension: m === 'POST' } }),
+    () => ({ status: 200, json: {} }),
+    () => ({ status: 200, text: '<html>' }),
+    () => ({ status: 404, json: { extension: false } }),
+    () => {
+      throw new Error('offline');
+    },
+  ];
+  for (const canary of answers) {
+    const { votes, requests, canaries } = setup({ safari: true, canary });
+    await rate(votes, 0);
+    await votes.run({ now: true });
+    await votes.run({ now: true });
+    assert.equal(requests.length, 0, String(canary));
+    assert.ok(canaries.length <= 2, 'no second check in the same run');
+  }
+});
+
+test('Safari: without access to the API or to the website, nothing goes, the check included', async () => {
+  for (const perms of [{ origins: false }, { site: false }]) {
+    const { votes, requests, canaries } = setup({ safari: true, perms });
+    await rate(votes, 0);
+    await votes.run({ now: true });
+    assert.equal(requests.length + canaries.length, 0, JSON.stringify(perms));
+  }
+});
+
+test('Safari: a run where the rule never comes back on sends nothing', async () => {
+  const { votes, requests, canaries, ctx } = setup({ safari: true });
+  ctx.chrome.declarativeNetRequest.updateEnabledRulesets = async () => {
+    throw new Error('no');
+  };
+  await rate(votes, 0);
+  await votes.run({ now: true });
+  assert.equal(requests.length + canaries.length, 0);
+});
+
+test('Safari is told apart by its manifest, or by its own address if the key went missing', () => {
+  const { ctx } = setup({ safari: true });
+  assert.equal(vm.runInContext('slopIsSafari() && !slopIsFirefox()', ctx), true);
+  const other = setup();
+  assert.equal(vm.runInContext('slopIsSafari()', other.ctx), false);
+  other.ctx.chrome.runtime.getURL = (p) => `safari-web-extension://1234/${p}`;
+  assert.equal(vm.runInContext('slopIsSafari()', other.ctx), true);
+  other.ctx.chrome.runtime.getURL = (p) => `chrome-extension://abcd/${p}`;
+  assert.equal(vm.runInContext('slopIsSafari()', other.ctx), false);
 });
 
 test('revoking Firefox consent turns sharing off and clears the queue', async () => {
@@ -772,6 +891,19 @@ test('every manifest has what the sender needs', () => {
   assert.ok(build.includes("'alarms'"));
   assert.ok(build.includes("optional: ['websiteContent']"));
   const rules = JSON.parse(readFileSync(here('../src/origin-rules.json'), 'utf8'));
-  assert.deepEqual(rules.map((r) => r.condition.requestDomains), [['api.hidetheslop.com']]);
-  assert.deepEqual(rules[0].action.requestHeaders, [{ header: 'origin', operation: 'remove' }]);
+  // The API, and Safari's origin check on the website, which must be the only page there.
+  assert.deepEqual(rules.map((r) => r.condition.requestDomains), [['api.hidetheslop.com'], ['hidetheslop.com']]);
+  assert.equal(rules[0].condition.urlFilter, undefined);
+  assert.equal(rules[1].condition.urlFilter, '|https://hidetheslop.com/.well-known/origin-check');
+  const common = readFileSync(here('../src/common.js'), 'utf8');
+  assert.ok(common.includes("var SLOP_ORIGIN_CHECK = 'https://hidetheslop.com/.well-known/origin-check';"));
+  for (const rule of rules) {
+    assert.deepEqual(rule.action.requestHeaders, [{ header: 'origin', operation: 'remove' }]);
+    assert.deepEqual(rule.condition.requestMethods.sort(), ['get', 'post']);
+    assert.deepEqual(rule.condition.resourceTypes, ['xmlhttprequest']);
+  }
+  // Safari runs the strip rule as Firefox does, and nothing of Firefox's consent.
+  assert.ok(/safari: \{[\s\S]*'declarativeNetRequestWithHostAccess'[\s\S]*rule_resources: \[\{ id: 'strip-origin', enabled: true, path: 'origin-rules.json' \}\]/.test(build));
+  const background = readFileSync(here('../src/background.js'), 'utf8');
+  assert.ok(background.indexOf('slopArmStrip();') < background.indexOf('SlopVotes.start();'), 'armed before anything starts');
 });

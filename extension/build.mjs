@@ -1,10 +1,13 @@
-// Builds dist/chrome and dist/firefox (+ zips) from src/.
+// Builds dist/chrome, dist/firefox (+ zips) and dist/safari from src/.
 // They differ only in the manifest: how the background runs (and so where the image
-// model runs), and Firefox's add-on id.
+// model runs), Firefox's add-on id and Safari's minimum version.
+//
+//   node build.mjs           every browser
+//   node build.mjs safari    one browser, leaving the others alone (the Xcode project runs this)
 import { cpSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
-const version = '1.9.0';
+const version = '1.10.0';
 
 const base = {
   manifest_version: 3,
@@ -58,14 +61,43 @@ const targets = {
       gecko_android: { strict_min_version: '142.0' },
     },
   },
+  // Safari runs the model the way Firefox does, on a background page with a proxy worker
+  // (the spike in docs/plans/2026-11-11-safari.md). Its Origin is safari-web-extension://
+  // and a random id, so it gets the same strip rule, re-armed and checked in common.js.
+  // The Xcode project in safari/ builds the app, so there's no zip.
+  safari: {
+    ...base,
+    permissions: [...base.permissions, 'declarativeNetRequestWithHostAccess'],
+    declarative_net_request: { rule_resources: [{ id: 'strip-origin', enabled: true, path: 'origin-rules.json' }] },
+    background: {
+      scripts: ['common.js', 'meta.js', 'train.js', 'votes.js', 'crowd.js', 'ort/ort.wasm.min.js', 'phash.js', 'vision.js', 'background.js'],
+      persistent: false, // Safari ignores it and unloads the page anyway
+    },
+    options_ui: { page: 'options.html' }, // Safari doesn't support open_in_tab
+    browser_specific_settings: { safari: { strict_min_version: '27.2' } }, // the version the spike tested
+    zip: false,
+  },
 };
 
-rmSync('dist', { recursive: true, force: true });
-for (const [name, manifest] of Object.entries(targets)) {
+const only = process.argv[2];
+if (only && !targets[only]) {
+  console.error(`unknown target ${only}; one of: ${Object.keys(targets).join(', ')}`);
+  process.exit(1);
+}
+
+if (only) rmSync(`dist/${only}`, { recursive: true, force: true });
+else rmSync('dist', { recursive: true, force: true });
+for (const [name, { zip = true, ...manifest }] of Object.entries(targets)) {
+  if (only && name !== only) continue;
   const dir = `dist/${name}`;
   mkdirSync(dir, { recursive: true });
   cpSync('src', dir, { recursive: true });
   writeFileSync(`${dir}/manifest.json`, JSON.stringify(manifest, null, 2) + '\n');
+  if (!zip) {
+    console.log(`built ${dir}`);
+    continue;
+  }
+  rmSync(`dist/hidetheslop-${name}-${version}.zip`, { force: true }); // zip would add to an old one
   execFileSync('zip', ['-qr', `../hidetheslop-${name}-${version}.zip`, '.'], { cwd: dir });
   console.log(`built ${dir} and dist/hidetheslop-${name}-${version}.zip`);
 }

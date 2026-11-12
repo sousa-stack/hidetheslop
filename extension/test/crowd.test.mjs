@@ -25,8 +25,9 @@ const hashOf = (i) => {
 const flip = (h, digits) => [...h].map((c, i) => (digits.includes(i) ? (parseInt(c, 16) ^ 1).toString(16) : c)).join('');
 
 // A fresh SlopCrowd. `reply(since)` answers each list fetch, or throws for a network
-// failure: a { status, json } or { status, text }.
-function setup({ sync = {}, local: seed = {}, reply, model = true, firefox = false, perms = {}, start = false } = {}) {
+// failure: a { status, json } or { status, text }. With `safari`, `canary(method)` answers
+// the origin check on the website, recorded in `canaries`.
+function setup({ sync = {}, local: seed = {}, reply, model = true, firefox = false, safari = false, canary, perms = {}, start = false } = {}) {
   const store = { sync: { visualCheck: true, ...sync }, local: { ...seed } };
   const requests = [];
   const listeners = { changed: [], alarm: [], startup: [] };
@@ -60,7 +61,8 @@ function setup({ sync = {}, local: seed = {}, reply, model = true, firefox = fal
       if (Object.keys(changes).length) listeners.changed.forEach((l) => l(changes, name));
     },
   });
-  const access = { origins: true, rules: ['strip-origin'], ...perms };
+  const access = { origins: true, site: true, rules: ['strip-origin'], ...perms };
+  const canaries = [];
   const chrome = {
     storage: { sync: area('sync'), local: area('local'), onChanged: { addListener: (l) => listeners.changed.push(l) } },
     alarms: {
@@ -68,15 +70,28 @@ function setup({ sync = {}, local: seed = {}, reply, model = true, firefox = fal
       create: (name, info) => alarms.set(name, info),
       onAlarm: { addListener: (l) => listeners.alarm.push(l) },
     },
-    permissions: { contains: async (q) => (q.origins ? access.origins : false) },
-    declarativeNetRequest: { getEnabledRulesets: async () => access.rules },
+    permissions: {
+      contains: async (q) => !!q.origins && access.origins && (!q.origins.includes('https://hidetheslop.com/*') || access.site),
+    },
+    declarativeNetRequest: {
+      getEnabledRulesets: async () => access.rules,
+      updateEnabledRulesets: async (change) => {
+        access.rules = access.rules.filter((id) => !(change.disableRulesetIds || []).includes(id));
+        for (const id of change.enableRulesetIds || []) if (!access.rules.includes(id)) access.rules.push(id);
+      },
+    },
     runtime: {
-      getManifest: () => (firefox ? { browser_specific_settings: { gecko: {} } } : {}),
+      getManifest: () => (firefox ? { browser_specific_settings: { gecko: {} } } : safari ? { browser_specific_settings: { safari: {} } } : {}),
       onStartup: { addListener: (l) => listeners.startup.push(l) },
     },
   };
   const caches = { open: async () => ({ keys: async () => (model ? [{}] : []) }) };
   const fetch = async (url, init) => {
+    if (url === 'https://hidetheslop.com/.well-known/origin-check') {
+      canaries.push(init.method || 'GET');
+      const answer = await (canary ?? (() => ({ status: 200, json: { extension: false } })))(init.method || 'GET');
+      return { status: answer.status, text: async () => answer.text ?? JSON.stringify(answer.json) };
+    }
     requests.push({ url, init });
     const since = Number(new URL(url).searchParams.get('since'));
     const answer = await (reply ?? (() => ({ status: 200, json: { seq: since, add: [], remove: [], more: false } })))(since);
@@ -90,7 +105,7 @@ function setup({ sync = {}, local: seed = {}, reply, model = true, firefox = fal
   vm.runInContext(readFileSync(here('../src/crowd.js'), 'utf8'), ctx);
   const crowd = vm.runInContext('SlopCrowd', ctx);
   if (start) crowd.start();
-  return { crowd, store, local: store.local, requests, listeners, alarms, ctx, quota };
+  return { crowd, store, local: store.local, requests, listeners, alarms, ctx, quota, canaries };
 }
 
 const page = (seq, add = [], remove = [], more = false) => ({ status: 200, json: { seq, add, remove, more } });
@@ -333,6 +348,35 @@ test('Chrome needs site access', async () => {
   assert.equal(requests.length, 0);
 });
 
+test('Chrome and Firefox fetch with no origin check', async () => {
+  for (const firefox of [false, true]) {
+    const { crowd, requests, canaries } = setup({ firefox });
+    assert.equal(await crowd.refresh(), true);
+    assert.equal(requests.length, 1);
+    assert.equal(canaries.length, 0);
+  }
+});
+
+test('Safari fetches only after the origin check passes in this run, and needs no sharing', async () => {
+  const { crowd, requests, canaries, local } = setup({ safari: true });
+  assert.equal(local.shareRatings, undefined);
+  assert.equal(await crowd.refresh(), true);
+  assert.deepEqual(canaries, ['GET', 'POST']);
+  assert.equal(requests.length, 1);
+  assert.equal(await crowd.refresh(), true);
+  assert.equal(canaries.length, 2, 'once a run');
+  for (const [canary, perms] of [
+    [() => ({ status: 200, json: { extension: true } }), {}],
+    [() => ({ status: 500, text: '' }), {}],
+    [undefined, { site: false }],
+    [undefined, { origins: false }],
+  ]) {
+    const blocked = setup({ safari: true, canary, perms });
+    assert.equal(await blocked.crowd.refresh(), false);
+    assert.equal(blocked.requests.length, 0, JSON.stringify(perms));
+  }
+});
+
 // ---- when -----------------------------------------------------------------------------
 
 test('start makes a 6-hourly alarm that first fires 1 to 30 minutes in, and fetches nothing itself', async () => {
@@ -528,6 +572,7 @@ test('every manifest has what the list needs, and Firefox strips Origin from GET
   const build = readFileSync(here('../build.mjs'), 'utf8');
   assert.ok(build.includes("'votes.js', 'crowd.js', 'ort/ort.wasm.min.js'"));
   assert.ok(build.includes("'alarms'"));
+  assert.ok(build.includes("browser_specific_settings: { safari: { strict_min_version: '27.2' } }"));
   const rules = JSON.parse(readFileSync(here('../src/origin-rules.json'), 'utf8'));
   assert.deepEqual(rules[0].condition.requestDomains, ['api.hidetheslop.com']);
   assert.deepEqual(rules[0].condition.requestMethods.sort(), ['get', 'post']);

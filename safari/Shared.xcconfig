@@ -1,0 +1,22 @@
+// Settings for the Safari app and its extension, kept here rather than in the project so
+// they're easy to read and diff. The team ID isn't here: it goes in Local.xcconfig, which
+// git ignores (copy Local.xcconfig.example).
+
+HTS_APP_BUNDLE_ID = com.hidetheslop.app
+// An extension's ID has to start with its app's.
+HTS_EXTENSION_BUNDLE_ID = $(HTS_APP_BUNDLE_ID).extension
+
+// Must match `version` in extension/build.mjs; build-extension.sh stops the build if not.
+MARKETING_VERSION = 1.10.0
+// Goes up by one for every build sent to App Store Connect.
+CURRENT_PROJECT_VERSION = 1
+
+// The oldest macOS that runs Safari 27: Safari 27 is for macOS Sequoia and Tahoe. The
+// extension's own minimum, Safari 27.2, is in its manifest.
+MACOSX_DEPLOYMENT_TARGET = 15.0
+
+// build-extension.sh runs node and writes extension/dist/safari, outside the sandbox
+// Xcode would otherwise put Run Script phases in.
+ENABLE_USER_SCRIPT_SANDBOXING = NO
+
+#include? "Local.xcconfig"

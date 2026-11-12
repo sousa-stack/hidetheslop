@@ -50,11 +50,11 @@
   }
   window.chrome = {
     storage: { sync: area('sync', sync), local: area('local', local), onChanged: { addListener: (l) => listeners.push(l) } },
-    permissions: { contains: async () => true, request: async () => !flag('refuse') },
+    permissions: { contains: async () => !flag('noaccess'), request: async () => !flag('refuse') },
     runtime: {
       getURL: (p) => p,
       openOptionsPage() {},
-      getManifest: () => ({ version: 'preview', ...(flag('firefox') ? { browser_specific_settings: { gecko: {} } } : {}) }),
+      getManifest: () => ({ version: 'preview', ...(flag('firefox') ? { browser_specific_settings: { gecko: {} } } : flag('safari') ? { browser_specific_settings: { safari: {} } } : {}) }),
       sendMessage: async (msg) => /^vote/.test(msg.type) ? voteMessage(msg) : (empty ? { count: 0, reasons: {} } : { count: 12, reasons: { 'AI hashtag': 7, 'AI label': 3, 'the picture check': 2 } }),
     },
     // For the popup: add &unreached for a tab that needs a reload, &blocked for a browser page.

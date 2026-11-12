@@ -1,0 +1,89 @@
+/* The extension's printed-poster look (extension/src/poster.css): one fixed palette that
+   ignores dark mode, flat colour, and condensed capitals from fonts the Mac already has,
+   because the app loads nothing from the web. */
+:root {
+    --ink: #2b2d31;
+    --paper: #edece8;
+    --amber: #fdae17;
+    --red: #c80000;
+    --display: "DIN Condensed", "Arial Narrow", Impact, sans-serif;
+    color-scheme: light;
+}
+
+* {
+    box-sizing: border-box;
+    -webkit-user-select: none;
+    -webkit-user-drag: none;
+    cursor: default;
+}
+
+html, body { height: 100%; }
+
+body {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--paper);
+    color: var(--ink);
+    font: 15px/1.45 -apple-system, system-ui, sans-serif;
+}
+
+/* The amber plate. Flat: dotted textures read as AI slop. */
+.plate {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 22px 28px;
+    background: var(--amber);
+}
+
+h1 {
+    margin: 0;
+    font: 700 58px/.9 var(--display);
+    letter-spacing: .01em;
+    text-transform: uppercase;
+    /* DIN Condensed's capitals sit high in their line box. */
+    transform: translateY(.14em);
+}
+
+main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin: 0 28px;
+    padding: 20px 0 24px;
+}
+
+p { margin: 0; }
+strong { color: var(--red); }
+
+.steps {
+    margin: 0;
+    padding: 14px 0 0 22px;
+    border-top: 2px solid var(--ink);
+}
+.steps li { margin: 4px 0; }
+
+/* Which sentence shows depends on what Safari says (Script.js). */
+body:not(.state-on, .state-off) :is(.state-on, .state-off),
+body.state-on :is(.state-off, .state-unknown),
+body.state-off :is(.state-on, .state-unknown) {
+    display: none;
+}
+body.state-on .steps { display: none; }
+
+button {
+    align-self: flex-start;
+    margin-top: auto;
+    padding: 12px 24px;
+    border: 0;
+    border-radius: 4px;
+    background: var(--red);
+    color: #fff;
+    font: 700 15px/1 -apple-system, system-ui, sans-serif;
+    letter-spacing: .02em;
+    cursor: pointer;
+}
+button:hover { background: #a80000; }
+button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }

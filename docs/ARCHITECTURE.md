@@ -4,16 +4,16 @@
 
 | File | Runs in | Job |
 |---|---|---|
-| `common.js` | everywhere | `SLOP_API`, `SLOP_DEFAULTS` (every synced setting), `slopGetSettings()`, `slopGetShare()`, `slopAskToShare()` |
+| `common.js` | everywhere | `SLOP_API`, `SLOP_DEFAULTS` (every synced setting), `slopGetSettings()`, `slopGetShare()`, `slopAskToShare()`, `slopIsFirefox()`, `slopIsSafari()`, `slopCanSeeSites()`, and Safari's `slopArmStrip()` and `slopStripReady()` (below) |
 | `content.js` + `content.css` | every page, every frame | finds AI content and hides it; the bars, the hover button, the right-click handling |
 | `meta.js` | content script, background, offscreen | `SlopMeta.scan(bytes)`: AI markers in image metadata |
-| `background.js` | Chrome service worker or Firefox background page | downloads, the classifier, ratings and retraining, badge counts, context menu |
+| `background.js` | Chrome service worker, or the Firefox and Safari background page | downloads, the classifier, ratings and retraining, badge counts, context menu |
 | `train.js` | background, `eval/probe.mjs` | `SlopTrain`: the logistic-regression classifier (train and score) |
-| `vision.js` | Firefox background page, Chrome `offscreen.html`, options page | `SlopVision`: downloads the CLIP model, turns a picture into a 512-number embedding, hashes a picture for a shared rating |
-| `phash.js` | Firefox background page, Chrome `offscreen.html` | `SlopHash`: the perceptual hash a vote carries |
+| `vision.js` | Firefox and Safari background page, Chrome `offscreen.html`, options page | `SlopVision`: downloads the CLIP model, turns a picture into a 512-number embedding, hashes a picture for a shared rating |
+| `phash.js` | Firefox and Safari background page, Chrome `offscreen.html` | `SlopHash`: the perceptual hash a vote carries |
 | `votes.js` | background | `SlopVotes`: the token, the vote queue and sending, when you've turned sharing on |
 | `crowd.js` | background | `SlopCrowd`: downloads the crowd's list of confirmed AI pictures and matches hashes against it, your own verdicts first |
-| `origin-rules.json` | Firefox only | takes `Origin` off GETs and POSTs to the API, because Firefox puts the install's random address in it |
+| `origin-rules.json` | Firefox and Safari | takes `Origin` off GETs and POSTs to the API, and off Safari's origin check, because both browsers put the install's random address in it |
 | `offscreen.html` / `offscreen.js` | Chrome only | hosts `vision.js`, because a service worker can't run it |
 | `ort/` | with `vision.js` | onnxruntime-web 1.31.1 (MIT), WebAssembly build |
 | `popup.*` | toolbar popup | count hidden on this page, show all, pause on this site |
@@ -42,7 +42,7 @@
 
 ## The background's `check`
 
-- **Picture check on:** `inspectUrl` downloads the picture **once** and returns the metadata verdict, the embedding and, while the crowd's list is in use, the hash. `SlopTrain.score()` then scores the embedding with the current classifier, and `SlopCrowd.flagged()` checks the hash against the list. A match hides with "the crowd flagged it", whatever the score. In Firefox, `vision.js` runs right there. Chrome creates `offscreen.html` and sends it an `inspect` message with `target: 'offscreen'`.
+- **Picture check on:** `inspectUrl` downloads the picture **once** and returns the metadata verdict, the embedding and, while the crowd's list is in use, the hash. `SlopTrain.score()` then scores the embedding with the current classifier, and `SlopCrowd.flagged()` checks the hash against the list. A match hides with "the crowd flagged it", whatever the score. In Firefox and Safari, `vision.js` runs right there. Chrome creates `offscreen.html` and sends it an `inspect` message with `target: 'offscreen'`.
 - **Picture check off, or the model failed:** `scanUrl` downloads only the first 512 KB and reads the metadata. Hosts that strip metadata (`STRIPS_METADATA`: fbcdn.net, cdninstagram.com) aren't downloaded at all for this.
 - Results are cached per URL, at most 2 picture checks run at once, and every download is made without cookies.
 
@@ -90,9 +90,24 @@
 - **Why this approach:** ready-made AI-image detectors did badly on flyers, the main kind of slop here. See `eval/README.md`.
 - **Retraining:** after each rating, the background retrains on the shipped examples plus your ratings, which takes about 0.2–0.4 seconds. A new version rebuilds your classifier from your ratings when it installs.
 
+## Safari
+
+The Safari build is the Firefox design: `background.scripts` with the model on the background page and its proxy worker, chosen by the spike in `docs/plans/2026-11-11-safari.md`. Its manifest differs from Firefox's only in `browser_specific_settings.safari` (minimum 27.2), no Firefox consent, and no `open_in_tab`. `slopIsSafari()` reads that key, with the extension's own `safari-web-extension:` address as a fallback, so a Safari that drops the key still gets Safari's checks.
+
+**The Origin, proven each run.** Safari puts `safari-web-extension://<random id>` in the `Origin` of the background's requests, and in the spike a strip rule listed as enabled still let it through until the rulesets were switched at runtime. So:
+
+1. `slopArmStrip()`, at the top of `background.js`, switches `strip-origin` off and on every time the background starts. It's local and sends nothing.
+2. `slopStripReady()` is what `allowed()` in `votes.js` and `listAllowed()` in `crowd.js` wait for on Safari. It needs site access for both `api.hidetheslop.com` and `hidetheslop.com`, then sends the canary: a GET and a POST, with the same options as a list download and a vote, to `https://hidetheslop.com/.well-known/origin-check`. The site answers `{"extension": true|false}`, whether an extension Origin arrived, and nothing else. Anything but `false` twice, including no answer, keeps votes and the list off until the background next starts.
+3. The canary goes once per background run, and only when a vote or list download asks, never on waking, because Safari wakes the background for picture checks and a request then would follow your browsing.
+4. The backstop: Caddy removes `Origin` from every request before the API (`header_up -Origin`), so the API never sees one from any browser.
+
+**Site access.** Safari grants it site by site and reports none at install. `slopCanSeeSites()` treats a failed check as no on Safari, where Chrome and Firefox treat it as yes, and the notice falls back to Safari's own Websites settings if **Allow on all websites** doesn't take. Votes and the list need access to the API's host only, plus the website's for the canary.
+
+**The app.** `safari/` is an Xcode project made once with `safari-web-extension-converter`, macOS only. The app (`com.hidetheslop.app`) is one window in the poster look, a `WKWebView` page with a button that opens Safari's Extensions settings. The extension (`com.hidetheslop.app.extension`) has no files of its own in the project: a Run Script phase, `safari/build-extension.sh`, runs `node build.mjs safari` and copies `dist/safari` into it, and stops if the versions disagree. Bundle IDs, versions and the minimum macOS (15, the oldest that runs Safari 27) are in `safari/Shared.xcconfig`; the team ID is in `safari/Local.xcconfig`, which git ignores.
+
 ## The website
 
-`site/` is plain HTML, CSS and a little JavaScript, deployed as static files on Cloudflare Workers. `site/build.mjs` copies `poster.css` and the logo in from `extension/src`, so the site and extension share one look. The model is a separate file on Cloudflare R2, not part of the site.
+`site/` is plain HTML, CSS and a little JavaScript, deployed as static files on Cloudflare Workers. `site/worker.js` runs for one path only, `/.well-known/origin-check` (Safari's canary, above); every page is served from assets without it, and the Worker's logs are off. `site/build.mjs` copies `poster.css` and the logo in from `extension/src`, so the site and extension share one look. The model is a separate file on Cloudflare R2, not part of the site.
 
 ## The API
 

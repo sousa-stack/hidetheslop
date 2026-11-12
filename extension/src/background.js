@@ -1,4 +1,4 @@
-// Chrome runs this as a service worker (needs importScripts); Firefox loads
+// Chrome runs this as a service worker (needs importScripts); Firefox and Safari load
 // common.js, meta.js, train.js, votes.js, crowd.js and the image model files first via
 // background.scripts.
 if (typeof importScripts === 'function' && typeof SlopMeta === 'undefined') {
@@ -6,6 +6,9 @@ if (typeof importScripts === 'function' && typeof SlopMeta === 'undefined') {
 }
 
 const api = SLOP_API;
+// Safari only: switch the Origin strip rule off and on before anything can be sent.
+// Nothing goes to the network here; the first vote or list download checks it worked.
+slopArmStrip();
 const READ_LIMIT = 512 * 1024; // metadata lives at the start of the file
 const MAX_PARALLEL = 4;
 const CACHE_MAX = 3000;
@@ -86,7 +89,8 @@ const scanUrl = cachedQueue(async (url) => {
 
 // ---- looking at the picture itself ---------------------------------------
 // Chrome's service worker can't run the model, so it goes to an offscreen page.
-// Firefox's background page runs it directly (vision.js is loaded before this file).
+// Firefox's and Safari's background pages run it directly (vision.js is loaded before
+// this file).
 
 let creatingOffscreen = null;
 async function ensureOffscreen() {
@@ -311,7 +315,7 @@ api.contextMenus.onClicked.addListener((info, tab) => {
 api.runtime.onInstalled.addListener(async ({ reason }) => {
   createMenus();
   api.action.setBadgeBackgroundColor({ color: '#c80000' }).catch(() => {});
-  // The welcome page also asks for site access if Firefox didn't get it at install.
+  // The welcome page also asks for site access if Firefox or Safari didn't get it at install.
   if (reason === 'install') {
     api.tabs.create({ url: api.runtime.getURL('welcome.html') }).catch(() => {});
     return;
@@ -325,8 +329,9 @@ api.runtime.onInstalled.addListener(async ({ reason }) => {
       await retrain(visionRatings).then((visionModel) => api.storage.local.set({ visionModel })).catch(() => {});
     }
   }
-  // Firefox lets people install without granting site access; nothing works until they do.
-  const granted = await api.permissions.contains({ origins: SLOP_ORIGINS }).catch(() => true);
+  // Firefox and Safari let people install without granting site access; nothing works
+  // until they do.
+  const granted = await slopCanSeeSites();
   if (!granted) api.runtime.openOptionsPage();
 });
 api.runtime.onStartup.addListener(createMenus);
