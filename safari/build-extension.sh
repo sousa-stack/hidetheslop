@@ -30,5 +30,7 @@ fi
 
 DEST="$TARGET_BUILD_DIR/$UNLOCALIZED_RESOURCES_FOLDER_PATH"
 mkdir -p "$DEST"
-rsync -a --delete "$SOURCE/" "$DEST/"
+# The privacy manifest gets there first, from Copy Bundle Resources, and the exclude keeps
+# --delete from removing it. It's the only file there that isn't the web extension's.
+rsync -a --delete --exclude PrivacyInfo.xcprivacy "$SOURCE/" "$DEST/"
 echo "copied $SOURCE ($version) into the extension"

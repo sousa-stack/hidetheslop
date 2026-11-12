@@ -9,19 +9,42 @@
 </head>
 <body>
     <header class="plate">
-        <img src="../Icon.png" width="88" height="88" alt="">
+        <img src="../Icon.png" width="80" height="80" alt="">
         <h1>Hide the Slop</h1>
     </header>
     <main>
-        <p class="state state-unknown">Hide the Slop lives in Safari. Turn it on there, and it hides AI slop on the pages you visit.</p>
-        <p class="state state-off"><strong>It's off.</strong> Turn it on in Safari, and it hides AI slop on the pages you visit.</p>
-        <p class="state state-on"><strong>It's on.</strong> You can close this window. Its settings are in Safari, under the Hide the Slop button in the toolbar.</p>
-        <ol class="steps">
-            <li>Click <b>Open Safari Settings</b> below.</li>
-            <li>In <b>Extensions</b>, tick <b>Hide the Slop</b>.</li>
-            <li>Allow it on all websites, so it can hide slop wherever you go.</li>
-        </ol>
-        <button class="open-preferences">Open Safari Settings</button>
+        <section class="start">
+            <p class="state state-unknown">Hide the Slop lives in Safari. Turn it on there, and it hides AI slop on the pages you visit.</p>
+            <p class="state state-off"><strong>It's off.</strong> Turn it on in Safari, and it hides AI slop on the pages you visit.</p>
+            <p class="state state-on"><strong>It's on.</strong> Its settings are in Safari, under the Hide the Slop button in the toolbar.</p>
+            <ol class="steps">
+                <li>Click <b>Open Safari Settings</b> below.</li>
+                <li>In <b>Extensions</b>, tick <b>Hide the Slop</b>.</li>
+                <li>Allow it on all websites, so it can hide slop wherever you go.</li>
+            </ol>
+            <div class="action">
+                <button class="open-preferences">Open Safari Settings</button>
+                <p class="opened" hidden></p>
+            </div>
+        </section>
+        <section class="line">
+            <h2>Hides</h2>
+            <p>Posts with AI labels and AI hashtags, pictures carrying the hidden note AI tools leave in them, and pictures your robot thinks are AI-made. Everything it hides keeps a bar with a <i>Show</i> button, so you can always look.</p>
+        </section>
+        <section class="line">
+            <h2>Teach</h2>
+            <p>Your robot is a small AI that runs on your Mac, off until you turn it on in the extension's settings. It makes mistakes, so teach it: click <i>Show</i> on something it hid and answer <i>AI, hide it</i> or <i>Not AI</i>, or hide one it missed with the <i>Hide slop</i> button. Each rating retrains it on your Mac.</p>
+        </section>
+        <section class="line">
+            <h2>Share</h2>
+            <p>Sharing is off unless you turn it on. Then each picture you rate sends a fingerprint of it and your answer, never the picture, its web address or anything about you.</p>
+        </section>
+        <nav class="links">
+            <a href="https://hidetheslop.com/privacy">Privacy policy</a>
+            <a href="https://hidetheslop.com/">hidetheslop.com</a>
+            <a class="report" href="mailto:hello@hidetheslop.com">Email a problem</a>
+            <a href="https://github.com/sousa-stack/hidetheslop">Source on GitHub</a>
+        </nav>
     </main>
 </body>
 </html>

@@ -7,8 +7,10 @@ HTS_APP_BUNDLE_ID = com.hidetheslop.app
 HTS_EXTENSION_BUNDLE_ID = $(HTS_APP_BUNDLE_ID).extension
 
 // Must match `version` in extension/build.mjs; build-extension.sh stops the build if not.
-MARKETING_VERSION = 1.10.0
-// Goes up by one for every build sent to App Store Connect.
+// release.sh doesn't use this copy: it reads the version from the built manifest instead.
+MARKETING_VERSION = 1.11.0
+// The build number. release.sh replaces it with the date and time on the command line, so
+// every upload's number goes up without a commit. This one is for local builds.
 CURRENT_PROJECT_VERSION = 1
 
 // The oldest macOS that runs Safari 27: Safari 27 is for macOS Sequoia and Tahoe. The

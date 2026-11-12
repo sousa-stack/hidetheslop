@@ -6,6 +6,7 @@
     --paper: #edece8;
     --amber: #fdae17;
     --red: #c80000;
+    --muted: #5a5a56;
     --display: "DIN Condensed", "Arial Narrow", Impact, sans-serif;
     color-scheme: light;
 }
@@ -17,7 +18,11 @@
     cursor: default;
 }
 
-html, body { height: 100%; }
+[hidden] { display: none !important; }
+
+/* The page fills the window and scrolls only if it ever has to. */
+html { height: 100%; }
+body { min-height: 100%; }
 
 body {
     margin: 0;
@@ -25,7 +30,7 @@ body {
     flex-direction: column;
     background: var(--paper);
     color: var(--ink);
-    font: 15px/1.45 -apple-system, system-ui, sans-serif;
+    font: 14px/1.45 -apple-system, system-ui, sans-serif;
 }
 
 /* The amber plate. Flat: dotted textures read as AI slop. */
@@ -33,7 +38,7 @@ body {
     display: flex;
     align-items: center;
     gap: 16px;
-    padding: 22px 28px;
+    padding: 16px 28px;
     background: var(--amber);
 }
 
@@ -50,20 +55,25 @@ main {
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 14px;
     margin: 0 28px;
-    padding: 20px 0 24px;
+    padding-bottom: 18px;
 }
 
 p { margin: 0; }
 strong { color: var(--red); }
 
+.start {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px 0 18px;
+}
+
 .steps {
     margin: 0;
-    padding: 14px 0 0 22px;
-    border-top: 2px solid var(--ink);
+    padding: 0 0 0 22px;
 }
-.steps li { margin: 4px 0; }
+.steps li { margin: 3px 0; }
 
 /* Which sentence shows depends on what Safari says (Script.js). */
 body:not(.state-on, .state-off) :is(.state-on, .state-off),
@@ -73,9 +83,15 @@ body.state-off :is(.state-on, .state-unknown) {
 }
 body.state-on .steps { display: none; }
 
+.action {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+.opened { color: var(--muted); font-size: 13px; }
+
 button {
-    align-self: flex-start;
-    margin-top: auto;
+    flex: none;
     padding: 12px 24px;
     border: 0;
     border-radius: 4px;
@@ -87,3 +103,39 @@ button {
 }
 button:hover { background: #a80000; }
 button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* Each row: one big word, then the small print beside it, split by a rule, like the
+   extension's welcome page. */
+.line {
+    display: grid;
+    grid-template-columns: 112px minmax(0, 1fr);
+    gap: 18px;
+    padding: 12px 0 11px;
+    border-top: 2px solid var(--ink);
+}
+.line h2 {
+    margin: 0;
+    font: 700 40px/.9 var(--display);
+    letter-spacing: .01em;
+    text-transform: uppercase;
+    transform: translateY(.14em);
+}
+
+/* Every link leaves the app: ViewController.swift hands it to your browser or email app. */
+.links {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 6px 22px;
+    /* At the foot of the window whatever the state, like a printer's line on a poster. */
+    margin-top: auto;
+    padding-top: 12px;
+    border-top: 2px solid var(--ink);
+    font-size: 13px;
+}
+.links a {
+    color: var(--red);
+    font-weight: 600;
+    cursor: pointer;
+}
+.links a:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }

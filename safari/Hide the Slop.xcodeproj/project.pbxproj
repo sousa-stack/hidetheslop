@@ -17,6 +17,9 @@
 		7B3E418B30A53ED900BE001D /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7B3E418A30A53ED900BE001D /* Assets.xcassets */; };
 		7B3E419230A53EDA00BE001D /* Hide the Slop Extension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 7B3E419130A53EDA00BE001D /* Hide the Slop Extension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		7B3E419730A53EDA00BE001D /* SafariWebExtensionHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B3E419630A53EDA00BE001D /* SafariWebExtensionHandler.swift */; };
+		7B3E41F430A53EDA00BE001D /* LinkPolicy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B3E41F330A53EDA00BE001D /* LinkPolicy.swift */; };
+		7B3E41F630A53EDA00BE001D /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7B3E41F530A53EDA00BE001D /* PrivacyInfo.xcprivacy */; };
+		7B3E41F830A53EDA00BE001D /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 7B3E41F730A53EDA00BE001D /* PrivacyInfo.xcprivacy */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -59,6 +62,9 @@
 		7B3E419830A53EDA00BE001D /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		7B3E41F030A53EDA00BE001D /* Shared.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Shared.xcconfig; sourceTree = "<group>"; };
 		7B3E41F130A53EDA00BE001D /* build-extension.sh */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = "build-extension.sh"; sourceTree = "<group>"; };
+		7B3E41F330A53EDA00BE001D /* LinkPolicy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkPolicy.swift; sourceTree = "<group>"; };
+		7B3E41F530A53EDA00BE001D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		7B3E41F730A53EDA00BE001D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -104,9 +110,11 @@
 			children = (
 				7B3E417930A53ED800BE001D /* AppDelegate.swift */,
 				7B3E418530A53ED800BE001D /* ViewController.swift */,
+				7B3E41F330A53EDA00BE001D /* LinkPolicy.swift */,
 				7B3E418730A53ED800BE001D /* Main.storyboard */,
 				7B3E418A30A53ED900BE001D /* Assets.xcassets */,
 				7B3E418C30A53ED900BE001D /* Info.plist */,
+				7B3E41F530A53EDA00BE001D /* PrivacyInfo.xcprivacy */,
 				7B3E417B30A53ED800BE001D /* Resources */,
 			);
 			path = "Hide the Slop";
@@ -128,6 +136,7 @@
 			children = (
 				7B3E419630A53EDA00BE001D /* SafariWebExtensionHandler.swift */,
 				7B3E419830A53EDA00BE001D /* Info.plist */,
+				7B3E41F730A53EDA00BE001D /* PrivacyInfo.xcprivacy */,
 			);
 			path = "Hide the Slop Extension";
 			sourceTree = "<group>";
@@ -225,6 +234,7 @@
 				7B3E417E30A53ED800BE001D /* Main.html in Resources */,
 				7B3E418B30A53ED900BE001D /* Assets.xcassets in Resources */,
 				7B3E418230A53ED800BE001D /* Style.css in Resources */,
+				7B3E41F630A53EDA00BE001D /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -232,6 +242,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				7B3E41F830A53EDA00BE001D /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -267,6 +278,7 @@
 			files = (
 				7B3E418630A53ED800BE001D /* ViewController.swift in Sources */,
 				7B3E417A30A53ED800BE001D /* AppDelegate.swift in Sources */,
+				7B3E41F430A53EDA00BE001D /* LinkPolicy.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -430,7 +442,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Hide the Slop Extension/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Hide the Slop Extension";
@@ -461,7 +472,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Hide the Slop Extension/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Hide the Slop Extension";
@@ -496,7 +506,6 @@
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Hide the Slop/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Hide the Slop";
@@ -535,7 +544,6 @@
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_OUTGOING_NETWORK_CONNECTIONS = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Hide the Slop/Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Hide the Slop";

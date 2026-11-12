@@ -4,6 +4,10 @@
 <dict>
 	<key>HTSExtensionBundleIdentifier</key>
 	<string>$(HTS_EXTENSION_BUNDLE_ID)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.utilities</string>
 	<key>SFSafariWebExtensionConverterVersion</key>
 	<string>26.4</string>
 </dict>
