@@ -20,8 +20,8 @@
 body { margin: 0; background: var(--ink); color: var(--ink); font: 16px/1.5 system-ui, -apple-system, sans-serif; }
 button { font: inherit; cursor: pointer; }
 button:disabled { cursor: default; opacity: .55; }
-button.link { all: unset; color: var(--red); cursor: pointer; font-weight: 600; text-decoration: underline; }
-button.link:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+button.link, a.link { all: unset; color: var(--red); cursor: pointer; font-weight: 600; text-decoration: underline; }
+button.link:focus-visible, a.link:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
 button.primary { background: var(--red); border: 0; border-radius: 4px; color: #fff; font-weight: 700; letter-spacing: .02em; padding: 12px 24px; }
 button.primary:hover:not(:disabled) { background: #a80000; }
 button.primary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }

@@ -122,6 +122,12 @@ async function checkPermission() {
 
   // Sharing lives in storage.local, per install, so it has no data-key. The queue belongs
   // to the background, so the count and Send now go through messages.
+  // Only what helps fix it, written by you: the version and browser, and nothing about the
+  // page you were on unless you add it.
+  const browser = slopIsSafari() ? 'Safari' : slopIsFirefox() ? 'Firefox' : 'Chrome, Edge or similar';
+  const report = `What went wrong:\n\n\nWhich site, if it's about one (just the site, like facebook.com):\n\n\n---\nHide the Slop ${api.runtime.getManifest().version}, ${browser}`;
+  $('reportProblem').href = `mailto:hello@hidetheslop.com?subject=${encodeURIComponent('Hide the Slop: a problem')}&body=${encodeURIComponent(report)}`;
+
   const share = $('shareRatings');
   async function showVotes(reply) {
     const votes = reply || (await api.runtime.sendMessage({ type: 'voteState' }).catch(() => null));

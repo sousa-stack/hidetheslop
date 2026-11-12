@@ -1,5 +1,9 @@
 # Changelog
 
+
+## 1.10.1
+- Settings has a Something wrong? row with an Email a report link. It opens your own email app with the version and browser filled in, and never the page you were on, because the repo is private and there's no public issues page yet.
+
 ## 1.10.0
 - **Safari on the Mac,** for Safari 27.2 and later, from the same code as Chrome and Firefox. It runs your robot the way Firefox does, on the background page. It comes inside a small Mac app (`safari/`), whose one window tells you how to turn it on. Not released yet: it waits for a test run in a real Safari.
 - In Safari, before the first rating or list download each time its background starts, the extension checks that Safari's per-install address really was taken off its requests, with two empty requests to a new address on hidetheslop.com that answers only whether one arrived. If it did, nothing is sent until the next start. Chrome and Firefox don't send it. The privacy policy says so.
