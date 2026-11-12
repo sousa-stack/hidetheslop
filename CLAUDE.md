@@ -21,7 +21,7 @@ Read these before changing things:
 - **Commit identity is set in this repo only,** in its own git config. His global git identity is for other work, so never change the global config or commit from another checkout.
 - End commit messages with the `Co-Authored-By:` line the session asks for. Commit messages here are a short summary plus a bullet list of what changed and why.
 - **Ask before downloading anything** (models, npm packages, Docker images), saying the name, the source and the size.
-- **The same repo holds the extension, the API and the infra.** Secrets stay out, as does `test-images/`. It's private until launch, then public.
+- **The same repo holds the extension, the API and the infra.** Secrets stay out, as does `test-images/`. It's public, at github.com/sousa-stack/hidetheslop, since 2026-11-12: anything committed is published, so check every diff for secrets and personal details. `main` is protected against force-pushes, and push protection blocks known secret formats.
 
 ## Layout
 
@@ -125,6 +125,7 @@ On the droplet:
 - **Firefox stops the background page after 30 idle seconds and never frees WebAssembly memory that lived in it.** That leaked 12 GB until 1.5.1. Keep `ort.env.wasm.proxy = true` in `vision.js`, so the model runs in a worker whose memory goes when the page does. Activity Monitor can hide this kind of leak, because the memory gets compressed.
 - **Safari's strip rule isn't on just because it says so.** In the spike a `strip-origin` ruleset listed as enabled still let `safari-web-extension://<uuid>` through, until the rulesets were switched at runtime. So Safari re-arms it at every background start (`slopArmStrip()`) and proves it with the canary to `hidetheslop.com/.well-known/origin-check` before `allowed()` or `listAllowed()` say yes (`slopStripReady()`). Never shortcut that with `getEnabledRulesets()`, and never send the canary on waking, which would follow browsing.
 - **Safari grants site access per site, and reports none at install.** Its per-site list only has sites you've visited, so in practice only "allow on all websites" works. A failed permission check counts as no on Safari (`slopCanSeeSites()`), and votes and the list need access to the API's host and the website's.
+- **GitHub Actions checks the droplet's ECDSA host key,** not its ED25519 one, so `DEPLOY_HOST_FINGERPRINT` is the ECDSA fingerprint, with `SHA256:` in front. A private key pasted into a secret needs its `BEGIN` and `END` lines, or the deploy fails with `ssh: no key found`.
 - **Firefox doesn't draw `::before` on `<input>`.** That's why the Settings switches are drawn with a gradient.
 - **Phone photos can carry location data.** Run published pictures through `site/tools/optimize_images.py`, which strips metadata and keeps them small.
 - **The in-app browser pane, when hidden, doesn't report what's on screen**, so IntersectionObserver never fires. The harness replaces IntersectionObserver for this reason. Treat timing numbers from a hidden pane as meaningless.

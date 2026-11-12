@@ -1,6 +1,6 @@
 # Roadmap
 
-The goal is a polished public launch on Chrome, Firefox, Edge and Safari, with a site at **hidetheslop.com** (Kevin owns the domain). The repo stays private until launch, then goes public as a portfolio piece.
+The goal is a polished public launch on Chrome, Firefox, Edge and Safari, with a site at **hidetheslop.com** (Kevin owns the domain). The repo went public on 2026-11-12.
 
 Hide the Slop stays free and open source, on every platform we can reach. It should pay for its own server, and a little on top is a bonus. Pooled ratings are how it gets better, and that has to happen without collecting personal data or browsing history. The design is in [CROWD-API.md](CROWD-API.md).
 
@@ -101,15 +101,13 @@ A build that sends votes needs the updated privacy policy first, because the sto
 
 ## Going public
 
-The repo's history becomes public along with its files. An audit on 2026-10-31 found no secrets and no real pictures in the history, using pattern searches, not a dedicated scanner. Do these around launch:
-
-- **Run a secret scanner** such as gitleaks over the full history.
-- **Add `SECURITY.md`,** saying how to report a problem, because a public API needs one.
-- **Say in the README and `eval/README.md`** that the accuracy numbers can't be reproduced from a clone, because `test-images/` stays private.
-- **Decide about the commit email.** Every commit shows Kevin's Gmail, and history also has a Chrome profile name, a mention of his employer and local paths that are now gone from the current files. Rewriting history can replace all of that, and is safe only while he's the sole contributor. Do it once, as the last step before going public, then force-push.
-- **Look again at `vision-examples.json`.** It publishes 512-number summaries of 224 real posts. The extension ships them anyway, but replacing them is worth considering when the training set grows.
-- **After going public,** protect `main`, because a push to it deploys, and turn on secret scanning and Dependabot alerts. They're free on public repos.
-
+Done on 2026-11-12, following `docs/plans/2026-11-12-going-public.md`:
+- `gitleaks` scanned the whole history and found no real secrets (two false alarms: a fake test secret, and wording about a passwordless test database).
+- History was rewritten once with `git-filter-repo`: every commit uses GitHub's no-reply address for `sousa-stack`, and personal details in old file versions were replaced. The old repo was deleted and recreated, so the old commits aren't reachable on GitHub, and a pre-rewrite SHA returns 404.
+- `SECURITY.md`, the README and `eval/README.md` notes, and `dependabot.yml` were added.
+- Deploys now run from pushes to `main`, through a `production` environment and a droplet key that can only run `deploy.sh main`.
+- After going public: `main` is protected against force-pushes and deletion; secret scanning, push protection, Dependabot alerts and private vulnerability reporting are on; outside contributors' workflows need approval; and the default Actions token is read-only.
+- `vision-examples.json` stays: it's numbers, not pictures, and it ships inside the extension anyway.
 ## Shared ratings
 
 Design: [CROWD-API.md](CROWD-API.md). Build plan: [plans/2026-10-30-local-api.md](plans/2026-10-30-local-api.md).
@@ -136,7 +134,7 @@ A static site in `site/`, live on Cloudflare Workers with no tracking scripts or
 - links to GitHub and donations
 - updated accuracy numbers after each retrain
 
-The site says "open source" while the repo is still private. Kevin chose to leave that as it is, because going public is coming soon.
+The site says "open source", and since 2026-11-12 the repo is public, so that's true.
 
 ## Counting visits and installs
 
