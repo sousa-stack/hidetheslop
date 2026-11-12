@@ -55,7 +55,7 @@ For each store: upload the zip, fill every field from section 3, upload the imag
 ## 6. The website (agent builds, Kevin previews, deploys on his yes)
 
 - **GitHub link:** a small GitHub mark (GitHub's own SVG, unmodified, set apart from the words, as GitHub's logo rules ask) next to "Star it on GitHub" under the install buttons, and "Source on GitHub" in the footer. Plain `<a href="https://github.com/sousa-stack/hidetheslop">`, no script, no iframe.
-- **Install buttons:** each `.soon` becomes a link to its listing once that store has approved it. Same size and border, so nothing jumps. Safari's is `https://apps.apple.com/app/id6834020766`, once Kevin releases it.
+- **Install buttons:** each `.soon` becomes a link to its listing once that store has approved it, shown as that store's official badge (Kevin's idea, 2026-11-12): "Download on the Mac App Store", Chrome Web Store's, Mozilla's "Get the add-on" and Microsoft's "Get it from Microsoft Edge", all in their black versions, unmodified and at the sizes each store's guidelines allow. Apple doesn't allow the Safari icon on its own, so badges, not bare browser logos. Badges are local files, never hotlinked. Safari's is `https://apps.apple.com/app/id6834020766`, once Kevin releases it.
 - Preview at desktop and phone widths in the browser pane, show Kevin, then `node build.mjs`, `node --test worker.test.mjs`, and `npx wrangler@4.156.0 deploy` on his yes. Check the live page afterwards (with NordVPN off, or through Cloudflare's own resolver).
 
 ## 6b. Counting, without tracking (before the buttons go live)

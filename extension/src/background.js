@@ -93,8 +93,14 @@ const scanUrl = cachedQueue(async (url) => {
 // this file).
 
 let creatingOffscreen = null;
+// hasDocument() is only documented from Chrome 150, so older ones ask getContexts()
+// (Chrome 116, the manifest's minimum).
+async function hasOffscreen() {
+  if (api.offscreen.hasDocument) return api.offscreen.hasDocument();
+  return (await api.runtime.getContexts({ contextTypes: ['OFFSCREEN_DOCUMENT'] })).length > 0;
+}
 async function ensureOffscreen() {
-  if (await api.offscreen.hasDocument()) return;
+  if (await hasOffscreen()) return;
   creatingOffscreen ??= api.offscreen
     .createDocument({
       url: 'offscreen.html',

@@ -41,6 +41,7 @@ const targets = {
     ...base,
     permissions: [...base.permissions, 'offscreen'], // runs the image model (see offscreen.html)
     background: { service_worker: 'background.js' },
+    minimum_chrome_version: '116', // runtime.getContexts(), for the offscreen page (background.js)
   },
   firefox: {
     ...base,

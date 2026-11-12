@@ -9,6 +9,11 @@ None of the rest shows up in the extension:
 - **A block list on the server.** Kevin can block a picture by its hash with `node dist/block.js` on the droplet, and it's never published again, whatever its votes say: anything within 6 bits of it, including hashes merged into the picture. Blocking runs the hourly job straight away, so the list sends the `remove` at once, and unblocking puts it back to what the votes say. It's a command rather than a route, so there's no secret to leak. The table holds the hash and a short note, and nothing about who reported it or when.
 - `eval/phash-of.mjs <file>` prints a picture's hash the way the extension works it out, for a picture Kevin has as a file.
 
+Added before the store submissions, on 2026-11-12, without a new version because 1.11.0 had never been in a store:
+- Chrome and Edge need Chrome 116 or later (`minimum_chrome_version`). Chrome's docs now list `offscreen.hasDocument()` from Chrome 150, so the offscreen page is found with `runtime.getContexts()` where that's missing.
+- The demo flyers on hidetheslop.com carry the IPTC note AI tools leave inside a file (`site/tools/mark-ai.mjs`), so a fresh install hides both with nothing turned on. The pictures themselves are unchanged.
+- The privacy policy says the extension follows the Chrome Web Store's Limited Use rules.
+
 ## 1.10.1
 - Settings has a Something wrong? row with an Email a report link. It opens your own email app with the version and browser filled in, and never the page you were on, because the repo is private and there's no public issues page yet.
 
