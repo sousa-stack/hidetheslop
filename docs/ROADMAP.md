@@ -23,7 +23,6 @@ Updated 2026-11-01. Start here.
 
 **Never run for real:**
 - The workflow's deploy job. Its test job passes on GitHub.
-- Restoring a backup with real rows in it. Backups run nightly to R2 and the lock is proven, but every restore so far has been of an empty database.
 - The hash on a Chrome offscreen page or a Firefox background page. It has passed on web pages in Chrome, Firefox and Safari, and on extension pages in Kevin's Chrome and Firefox.
 - Clicking "Turn it on" on a real install, which would be the first real download from the model mirror.
 - A true first install opening the welcome page, and the update rebuild of a person's classifier.

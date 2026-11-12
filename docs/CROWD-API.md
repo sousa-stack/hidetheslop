@@ -220,4 +220,6 @@ Everything except steps 7 and 15 was done on 2026-11-01, and the API is live. Mo
 17. Run `~/hidetheslop/restore.sh hidetheslop_check` and compare its row counts with the live database. Dropping `hidetheslop_check` afterwards is a manual `DROP`, which is yours to do.
 18. Schedule it nightly as `deploy`, with `crontab -e`: `15 3 * * * $HOME/hidetheslop/backup.sh >> $HOME/backup.log 2>&1`.
 
+**Proven on 2026-11-12:** a fresh backup restored from R2 into a separate database matched the live one exactly: 38 votes, 32 pictures, 32 verdicts, 1 embedding, with every table's rows identical, and `verdict_seq` moved 1,000,000 ahead as designed.
+
 **To recover,** on a new droplet if need be: set up steps 1 to 4 with the same `.env`, run `deploy.sh`, then `./restore.sh hidetheslop_restored`. It refuses the live database, so a slip can't overwrite it. It also moves `verdict_seq` 1,000,000 past the dump, because an old dump rewinds it and clients holding a higher cursor would otherwise never see a new verdict. Check the row counts it prints, stop the API, swap the two databases with `ALTER DATABASE ... RENAME TO`, and start the API. Votes since that dump are gone, and clients keep any verdict from that gap until it's published again.
