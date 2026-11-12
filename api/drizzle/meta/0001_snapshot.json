@@ -1,0 +1,548 @@
+{
+  "id": "59bf2fe1-b85a-4f5d-b00d-d75c06e2199e",
+  "prevId": "011353c1-109d-4a14-8a5b-03bdd424954b",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.blocked_hashes": {
+      "name": "blocked_hashes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "hash_version": {
+          "name": "hash_version",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "phash": {
+          "name": "phash",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "note": {
+          "name": "note",
+          "type": "varchar(80)",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "blocked_hashes_version_phash_unique": {
+          "name": "blocked_hashes_version_phash_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "hash_version",
+            "phash"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.embeddings": {
+      "name": "embeddings",
+      "schema": "",
+      "columns": {
+        "hash_id": {
+          "name": "hash_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "model_version": {
+          "name": "model_version",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "vector": {
+          "name": "vector",
+          "type": "bytea",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "embeddings_hash_id_hashes_id_fk": {
+          "name": "embeddings_hash_id_hashes_id_fk",
+          "tableFrom": "embeddings",
+          "tableTo": "hashes",
+          "columnsFrom": [
+            "hash_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "embeddings_hash_id_model_version_pk": {
+          "name": "embeddings_hash_id_model_version_pk",
+          "columns": [
+            "hash_id",
+            "model_version"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.hashes": {
+      "name": "hashes",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "hash_version": {
+          "name": "hash_version",
+          "type": "smallint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "phash": {
+          "name": "phash",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "canonical_id": {
+          "name": "canonical_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "checked": {
+          "name": "checked",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "first_seen": {
+          "name": "first_seen",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "current_date"
+        },
+        "band0": {
+          "name": "band0",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "generated": {
+            "as": "((phash >> 48) & 65535)::integer",
+            "type": "stored"
+          }
+        },
+        "band1": {
+          "name": "band1",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "generated": {
+            "as": "((phash >> 32) & 65535)::integer",
+            "type": "stored"
+          }
+        },
+        "band2": {
+          "name": "band2",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "generated": {
+            "as": "((phash >> 16) & 65535)::integer",
+            "type": "stored"
+          }
+        },
+        "band3": {
+          "name": "band3",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "generated": {
+            "as": "(phash & 65535)::integer",
+            "type": "stored"
+          }
+        }
+      },
+      "indexes": {
+        "hashes_band0_idx": {
+          "name": "hashes_band0_idx",
+          "columns": [
+            {
+              "expression": "hash_version",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "band0",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "hashes_band1_idx": {
+          "name": "hashes_band1_idx",
+          "columns": [
+            {
+              "expression": "hash_version",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "band1",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "hashes_band2_idx": {
+          "name": "hashes_band2_idx",
+          "columns": [
+            {
+              "expression": "hash_version",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "band2",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "hashes_band3_idx": {
+          "name": "hashes_band3_idx",
+          "columns": [
+            {
+              "expression": "hash_version",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "band3",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "hashes_canonical_id_idx": {
+          "name": "hashes_canonical_id_idx",
+          "columns": [
+            {
+              "expression": "canonical_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "hashes_unchecked_idx": {
+          "name": "hashes_unchecked_idx",
+          "columns": [
+            {
+              "expression": "first_seen",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "phash",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "where": "not checked",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "hashes_canonical_id_hashes_id_fk": {
+          "name": "hashes_canonical_id_hashes_id_fk",
+          "tableFrom": "hashes",
+          "tableTo": "hashes",
+          "columnsFrom": [
+            "canonical_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "hashes_version_phash_unique": {
+          "name": "hashes_version_phash_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "hash_version",
+            "phash"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.verdicts": {
+      "name": "verdicts",
+      "schema": "",
+      "columns": {
+        "hash_id": {
+          "name": "hash_id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "verdict_status",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "label": {
+          "name": "label",
+          "type": "vote_label",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ai_weight": {
+          "name": "ai_weight",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "real_weight": {
+          "name": "real_weight",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "vote_count": {
+          "name": "vote_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "published": {
+          "name": "published",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "seq": {
+          "name": "seq",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "verdicts_seq_idx": {
+          "name": "verdicts_seq_idx",
+          "columns": [
+            {
+              "expression": "seq",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "verdicts_hash_id_hashes_id_fk": {
+          "name": "verdicts_hash_id_hashes_id_fk",
+          "tableFrom": "verdicts",
+          "tableTo": "hashes",
+          "columnsFrom": [
+            "hash_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.votes": {
+      "name": "votes",
+      "schema": "",
+      "columns": {
+        "hash_id": {
+          "name": "hash_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "token": {
+          "name": "token",
+          "type": "char(32)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "label": {
+          "name": "label",
+          "type": "vote_label",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "source": {
+          "name": "source",
+          "type": "vote_source",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "votes_hash_id_hashes_id_fk": {
+          "name": "votes_hash_id_hashes_id_fk",
+          "tableFrom": "votes",
+          "tableTo": "hashes",
+          "columnsFrom": [
+            "hash_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "votes_hash_id_token_pk": {
+          "name": "votes_hash_id_token_pk",
+          "columns": [
+            "hash_id",
+            "token"
+          ]
+        }
+      },
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {
+    "public.verdict_status": {
+      "name": "verdict_status",
+      "schema": "public",
+      "values": [
+        "pending",
+        "confirmed",
+        "disputed"
+      ]
+    },
+    "public.vote_label": {
+      "name": "vote_label",
+      "schema": "public",
+      "values": [
+        "ai",
+        "real"
+      ]
+    },
+    "public.vote_source": {
+      "name": "vote_source",
+      "schema": "public",
+      "values": [
+        "rated",
+        "hid"
+      ]
+    }
+  },
+  "schemas": {},
+  "sequences": {
+    "public.verdict_seq": {
+      "name": "verdict_seq",
+      "schema": "public",
+      "increment": "1",
+      "startWith": "1",
+      "minValue": "1",
+      "maxValue": "9223372036854775807",
+      "cache": "1",
+      "cycle": false
+    }
+  },
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

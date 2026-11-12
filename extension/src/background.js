@@ -145,15 +145,18 @@ const STRIPS_METADATA = /(^|\.)(fbcdn\.net|cdninstagram\.com)$/;
 
 // What a content script wants to know about an image. `picture`: score how it looks.
 // `meta`: read its metadata. Returns { meta, score, crowd }, or null. `crowd` says the
-// picture matches the crowd's list, matched here and never looked up.
+// picture matches the crowd's list, matched here and never looked up. Only a match also
+// carries the picture's `phash`, for Report this; the page has no use for any other hash.
 async function check({ url, picture, meta }) {
   const inspected = picture ? await inspectUrl(url) : null;
   if (inspected) {
-    return {
+    const reply = {
       meta: meta ? inspected.meta : null,
       score: SlopTrain.score(await currentClassifier(), inspected.embedding),
       crowd: await SlopCrowd.flagged(imageKey(url), inspected.phash).catch(() => false),
     };
+    if (reply.crowd) reply.phash = inspected.phash;
+    return reply;
   }
   // No model (or it failed): the metadata check still works on its own.
   if (meta && !STRIPS_METADATA.test(new URL(url).hostname)) return { meta: await scanUrl(url), score: null };
@@ -226,6 +229,19 @@ function imageKey(url) {
   }
 }
 
+// ---- reporting a picture the crowd hid -------------------------------------
+
+// Report this opens your own email app with the picture's fingerprint, the version and the
+// browser, and nothing about the page; you choose whether to send it. It's opened from here
+// rather than as a link in the page, so the site can't catch the click. A mailto: hands off
+// to your email app without the tab leaving its page.
+function reportPicture(phash, tabId) {
+  if (typeof phash !== 'string' || !/^[0-9a-f]{16}$/.test(phash)) return;
+  const body = `This picture isn't AI, but the crowd's list hid it.\n\nFingerprint: ${phash}\n\n---\nHide the Slop ${api.runtime.getManifest().version}, ${slopBrowserName()}`;
+  const url = `mailto:hello@hidetheslop.com?subject=${encodeURIComponent('Hide the Slop: a real picture the crowd hid')}&body=${encodeURIComponent(body)}`;
+  api.tabs.update(tabId, { url }).catch(() => {});
+}
+
 // ---- badge / per-tab stats ------------------------------------------------
 
 const tabStats = new Map(); // tabId -> Map(frameId -> {count, reasons})
@@ -266,6 +282,10 @@ api.runtime.onMessage.addListener((msg, sender, sendResponse) => {
   if (msg.type === 'learn') {
     learn(msg.url, msg.label, msg.source, !!sender.tab?.incognito).then(sendResponse);
     return true;
+  }
+  if (msg.type === 'reportPicture' && sender.tab) {
+    reportPicture(msg.phash, sender.tab.id);
+    return false;
   }
   if (msg.type === 'voteState') {
     SlopVotes.state().then(sendResponse, () => sendResponse(null));

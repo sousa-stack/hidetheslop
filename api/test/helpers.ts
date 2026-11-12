@@ -21,7 +21,7 @@ export function openTestDb() {
 type TestDb = ReturnType<typeof openTestDb>['db'];
 
 export async function reset(db: TestDb): Promise<void> {
-  await db.execute(sql`truncate hashes, votes, verdicts, embeddings cascade`);
+  await db.execute(sql`truncate hashes, votes, verdicts, embeddings, blocked_hashes cascade`);
   await db.execute(sql`alter sequence verdict_seq restart`);
 }
 
@@ -30,6 +30,12 @@ export const token = (): string => randomBytes(16).toString('hex');
 // A phash `n` bits away from `base`: flips the lowest n bits, which all sit in one band.
 export function flip(base: string, n: number): string {
   const mask = (1n << BigInt(n)) - 1n;
+  return (BigInt(`0x${base}`) ^ mask).toString(16).padStart(16, '0');
+}
+
+// A phash that differs from `base` at exactly these bit positions, 0 being the lowest.
+export function flipBits(base: string, positions: readonly number[]): string {
+  const mask = positions.reduce((m, p) => m | (1n << BigInt(p)), 0n);
   return (BigInt(`0x${base}`) ^ mask).toString(16).padStart(16, '0');
 }
 

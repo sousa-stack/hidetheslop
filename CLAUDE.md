@@ -32,7 +32,7 @@ extension/          the extension
   test/             unit test, fake-feed harness, live page, settings preview
   tools/            make_icons.sh (icons from brand/logo-1024.png)
 api/                the server: Fastify, TypeScript, Drizzle, Postgres
-  src/              routes/, db/schema.ts, jobs/aggregate.ts, config.ts
+  src/              routes/, db/schema.ts, jobs/aggregate.ts, config.ts, block.ts (the block list command)
   drizzle/          generated migrations, committed
   test/             tests against a real Postgres
 safari/             the Mac app that carries the Safari extension: an Xcode project whose Run Script
@@ -111,8 +111,8 @@ Once the droplet exists:
 - Pushing API or infra changes to `main` tests them, and deploys once the `DEPLOY_ENABLED` repo variable is `true`. Don't SSH in to fix something that should be a commit.
 - `~/hidetheslop/deploy.sh main` deploys, and rolls the code back if the health check fails.
 - Logs: `docker compose logs --tail=200 api`. Status: `docker compose ps`, `docker stats --no-stream`, `df -h`. Database shell: `docker compose exec db sh -c 'psql -U "$POSTGRES_USER" "$POSTGRES_DB"'`.
-- **Fine without asking:** reading logs, `docker compose ps`, restarting `api`, running `deploy.sh`, and read-only SQL (`SELECT`).
-- **Never without Kevin's explicit OK:** `docker compose down -v`, deleting volumes, manual `DROP`/`DELETE`/`TRUNCATE`, changing the firewall or sshd config, editing `.env`, `rm -rf` anything, installing system packages, or changing DNS or Cloudflare settings.
+- **Fine without asking:** reading logs, `docker compose ps`, restarting `api`, running `deploy.sh`, read-only SQL (`SELECT`), and `docker compose exec -T api node dist/block.js list`.
+- **Never without Kevin's explicit OK:** `docker compose down -v`, deleting volumes, manual `DROP`/`DELETE`/`TRUNCATE`, changing the firewall or sshd config, editing `.env`, `rm -rf` anything, installing system packages, changing DNS or Cloudflare settings, or `block.js block` and `block.js unblock`, which change what every install hides (`unblock` also deletes a row). The runbook is in `docs/CROWD-API.md`.
 
 **Weekly health check:** SSH in and report disk use, memory, container health, API errors over the last 7 days, the `fail2ban-client status sshd` ban count, pending apt updates, the newest backup and the last successful deploy. Flag anything unusual, and change nothing.
 

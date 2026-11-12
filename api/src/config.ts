@@ -5,6 +5,11 @@ export const CONFIRM_MIN_VOTES = 5;
 export const CONFIRM_MIN_SHARE = 0.8;
 export const EMBEDDING_MIN_VOTES = 3;
 export const MERGE_MAX_BITS = 3;
+// A block reaches every stored hash this close to it, wider than a merge, because it errs
+// on the side of not hiding: a slightly different copy of a real picture stays unhidden too.
+// Distances come in twos; copies measured up to 4 bits apart, flyers from one template 8 or
+// more, and different pictures 12 or more.
+export const BLOCK_MAX_BITS = 6;
 export const LONE_HASH_DAYS = 90;
 // Fixed, not tied to CONFIRM_MIN_VOTES. "Fewer than 5 votes is deleted after 90 days" is a
 // public promise, and a test setting mustn't move it.

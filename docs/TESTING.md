@@ -37,10 +37,11 @@ cd api && ./scripts/test-docker.sh
 | `embeddings.test.ts` | when an embedding is stored or skipped, and canonical base64 |
 | `verdicts.test.ts` | paging, `add` and `remove`, the cache header, no rate-limit headers, and that raising the threshold unpublishes through `remove` |
 | `aggregate.test.ts` | verdict boundaries, weights, merging, `seq`, the lock, expiry, and that the vote threshold can move while expiry can't |
+| `block.test.ts` | `block.js`: a block unpublishes, takes a new `seq` and goes out in `remove`; it reaches merged hashes and copies at exactly 6 bits spread over all four bands, and not at 7; unblocking republishes only what the votes still call AI; a block before any votes holds; the lock held throughout and released partway; `list`; what a hash and note must look like; and the real process exiting on its own without printing a value it was given, even on a database error |
 | `schedule.test.ts` | the run soon after startup, the interval, and that 0 turns both off |
 | `env.test.ts` | the aggregate interval's upper limit, the vote threshold's range, and that errors don't repeat the database password |
 | `privacy.test.ts` | no IP, phash, token or URL in logs on a 202, 400, 404, 413 or a real 500, the body limit, plus rate limits by client |
-| `schema.test.ts` | no column named like an IP, URL, user, email or voter, no date or time on `votes`, and that the indexes `backup.sh` clusters on start with a random id |
+| `schema.test.ts` | exactly the five tables, no column named like an IP, URL, user, email or voter, no date or time on `votes` or `blocked_hashes`, the indexes `backup.sh` clusters on starting with a random id, and `blocked_hashes`' columns and unique hash |
 | `health.test.ts` | 200, and 503 with a broken database, without leaking the error |
 
 ### The production files
@@ -67,6 +68,7 @@ This Mac is shared, so all of it stays in the Compose project `hidetheslop-local
 `check` goes through Caddy with `curl --resolve`, and covers:
 - Containers healthy, a read-only API, no host port on the API, database or Uptime Kuma, migrations, `/health`, and `/` on the status host, which must not be on Uptime Kuma's database setup page. There's no `/status` route. Caddy has no healthcheck, so it only counts as running.
 - 5 votes with 5 tokens reaching `/v1/verdicts` with the cache header. Restarting the API triggers the job, 30 seconds later.
+- `block.js` in the running container: `block` on that picture while another session holds the aggregate lock for 8 seconds, so it has to wait, then the `remove` in `/v1/verdicts`, `list`, `unblock` and the `add`. A block of a hash nobody voted on stays, so the restore below carries it, and a refused hash isn't echoed.
 - The embedding gate at 2 and 3 votes, a rejected `url` field, and 64,000 bytes accepted against 64,001 refused.
 - A forged `CF-Connecting-IP` not being believed. That passes even with `trusted_proxies` deleted, so a **control** reloads Caddy trusting the bridge subnet, where distinct forged addresses must get separate limits. The probes use `/v1/verdicts`, because votes allow only 60 an hour.
 - No client IP, phash, token or path in the Caddy and API logs, through a 404 and a real 502 with the API stopped. The **control** removes `log default`, and the client IP must then appear. Lines from Caddy's `admin.api` logger are left out, because they're the script's own `caddy reload`.
@@ -78,7 +80,7 @@ This Mac is shared, so all of it stays in the Compose project `hidetheslop-local
 - `CLUSTER`: votes are out of id order before, and votes and hashes are in id order in the dump.
 - An encrypted upload with rclone's local backend standing in for R2, behind the same `crypt` remote: the stored name and bytes aren't readable as a dump, and 14 local dumps are kept.
 - The monitor ping, on a good run only, and no secret on a command line, in the output, or left on disk.
-- `restore.sh`: a round trip with matching row counts and `verdict_seq` moved forward, refusing the live database, and refusing a dump with no completion marker.
+- `restore.sh`: a round trip with matching row counts, `blocked_hashes` included, and `verdict_seq` moved forward, refusing the live database, and refusing a dump with no completion marker.
 - A failed upload exiting non-zero and keeping the local dump.
 
 **What this can't prove:** Cloudflare in front, real certificates, real client IPs, the firewall, `compose pull`, a real Uptime Kuma push monitor, and the real bucket: the S3 backend, the token, the lifecycle rule and the lock. This Mac is arm64 and the droplet will be amd64: every image is published for amd64 and the API has no native modules, but nothing has run on amd64 yet.
@@ -101,6 +103,8 @@ python3 -m http.server 8767 --directory ~/Projects/hidetheslop
 Open `http://localhost:8767/extension/test/harness.html` and read each post's `data-hidetheslop` state. The expected results:
 - **Hidden:** label, hashtag, metadata, visual, keyword, fbpost, reel, late, and crowd, whose bar says "the crowd flagged it" although its robot score is low.
 - **Visible:** sponsored (the setting is off), normal, fbnormal, crowdmine (your Not AI wins) and crowdmiss.
+
+After **Show**, crowd's bar asks whether it was AI and has **Report this**, a plain link; visual's has only the two answers. `window.reported` records the hash Report this sends, which must be `window.crowdHashes.listed`.
 
 `window.learned` records rating messages as `[label, file, source]`. **AI, hide it** and **Not AI** must say `rated`, and the hover button `hid`. The hover button's shadow root is closed, so it needs a real mouse. A post hidden for its label or tags gets no **was this AI?** question.
 
@@ -178,6 +182,8 @@ cd extension && node build.mjs && cd ../eval && node crowd-check.mjs   # about t
 ```
 
 It fires the real `fetch-crowd` alarm rather than waiting, then checks: nothing fetched while your robot is off, the alarm moving within 30 minutes when it's turned on, both pages fetched and stored, the headers, a listed picture on a real page hidden by the real content script with "the crowd flagged it" through Chrome's offscreen page and Firefox's background page, an unlisted one and one you rated Not AI at another address left alone, no extra download, 12 MP hashed and over 12 MP skipped, and off deleting the list and stopping fetches. On Firefox a control turns the strip rule off: a POST then carries `Origin: moz-extension://<uuid>`.
+
+It also clicks **Show** and then **Report this** on the listed picture, as a person would. Its copy of `background.js` records the address `tabs.update` is given in storage, which survives the background restarting, then lets the real call go ahead. The email must go to hello@hidetheslop.com with only a subject and a body, the body must be exactly the hash, the version and the browser, and the page must stay put. Last, `phash-of.mjs` on the same picture, in its own headless Chrome, must print the hash the extension worked out. 54 checks on 2026-11-12.
 
 Measured on 2026-11-11, on Chrome for Testing 156 and Firefox 160. Chrome's list GET sends no `Origin`:
 

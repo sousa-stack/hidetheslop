@@ -1,6 +1,14 @@
 # Changelog
 
 
+## 1.11.0
+- **Report this,** on a picture the crowd hid. After **Show**, the bar that asks whether it was AI has a third link, which opens your own email app with the picture's 16-digit fingerprint, the version and the browser filled in, and nothing about the page. You choose whether to send it. A wrong verdict hides a picture for everyone, and this is how Kevin finds out. It isn't offered for a lone picture blurred in place, in **Remove it completely** mode, or with your robot off.
+- The privacy policy says what a report holds.
+
+None of the rest shows up in the extension:
+- **A block list on the server.** Kevin can block a picture by its hash with `node dist/block.js` on the droplet, and it's never published again, whatever its votes say: anything within 6 bits of it, including hashes merged into the picture. Blocking runs the hourly job straight away, so the list sends the `remove` at once, and unblocking puts it back to what the votes say. It's a command rather than a route, so there's no secret to leak. The table holds the hash and a short note, and nothing about who reported it or when.
+- `eval/phash-of.mjs <file>` prints a picture's hash the way the extension works it out, for a picture Kevin has as a file.
+
 ## 1.10.1
 - Settings has a Something wrong? row with an Email a report link. It opens your own email app with the version and browser filled in, and never the page you were on, because the repo is private and there's no public issues page yet.
 

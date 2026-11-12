@@ -124,8 +124,7 @@ async function checkPermission() {
   // to the background, so the count and Send now go through messages.
   // Only what helps fix it, written by you: the version and browser, and nothing about the
   // page you were on unless you add it.
-  const browser = slopIsSafari() ? 'Safari' : slopIsFirefox() ? 'Firefox' : 'Chrome, Edge or similar';
-  const report = `What went wrong:\n\n\nWhich site, if it's about one (just the site, like facebook.com):\n\n\n---\nHide the Slop ${api.runtime.getManifest().version}, ${browser}`;
+  const report = `What went wrong:\n\n\nWhich site, if it's about one (just the site, like facebook.com):\n\n\n---\nHide the Slop ${api.runtime.getManifest().version}, ${slopBrowserName()}`;
   $('reportProblem').href = `mailto:hello@hidetheslop.com?subject=${encodeURIComponent('Hide the Slop: a problem')}&body=${encodeURIComponent(report)}`;
 
   const share = $('shareRatings');

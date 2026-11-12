@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import {
   AGGREGATE_BOOT_DELAY_MS,
+  BLOCK_MAX_BITS,
   CONFIRM_MIN_SHARE,
   CONFIRM_MIN_VOTES,
   HID_WEIGHT,
@@ -45,6 +46,9 @@ export async function mergeNearDuplicates(db: Queryable): Promise<void> {
 // committed after the merge step waits for the next run instead of getting a verdict
 // before it had the chance to join a root. `published` takes a new seq only when it
 // changes, or on a new row that's published, so clients fetch just what changed.
+// A picture is never published while its root, or any hash merged into it, is within
+// BLOCK_MAX_BITS of a blocked hash. Its status, label and counts still follow the votes,
+// so what the crowd said stays visible.
 export async function updateVerdicts(db: Queryable, minVotes = CONFIRM_MIN_VOTES): Promise<void> {
   await db.execute(sql`
     with counted as (
@@ -78,7 +82,13 @@ export async function updateVerdicts(db: Queryable, minVotes = CONFIRM_MIN_VOTES
                when l.label is not null then 'confirmed'::verdict_status
                else 'disputed'::verdict_status
              end as status,
-             l.label is not distinct from 'ai'::vote_label as published
+             l.label is not distinct from 'ai'::vote_label
+               and not exists (
+                 select 1 from hashes member
+                 join blocked_hashes b on b.hash_version = member.hash_version
+                 where (member.id = l.hash_id or member.canonical_id = l.hash_id)
+                   and bit_count((member.phash # b.phash)::bit(64)) <= ${BLOCK_MAX_BITS}
+               ) as published
       from labelled l
     )
     insert into verdicts (hash_id, status, label, ai_weight, real_weight, vote_count, published, seq)

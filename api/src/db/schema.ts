@@ -15,6 +15,7 @@ import {
   smallint,
   unique,
   uuid,
+  varchar,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
 
@@ -102,4 +103,18 @@ export const embeddings = pgTable(
     vector: bytea('vector').notNull(), // exactly 512 bytes, checked by the route
   },
   (t) => [primaryKey({ columns: [t.hashId, t.modelVersion] })],
+);
+
+// Pictures Kevin took off the list by hand, with `node dist/block.js`. Nothing about who
+// reported one or when, and no bands: the list is tiny, so the job compares against every
+// row, which also finds copies at 6 bits whose flips land in all four bands.
+export const blockedHashes = pgTable(
+  'blocked_hashes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    hashVersion: smallint('hash_version').notNull(),
+    phash: bigint('phash', { mode: 'bigint' }).notNull(),
+    note: varchar('note', { length: 80 }),
+  },
+  (t) => [unique('blocked_hashes_version_phash_unique').on(t.hashVersion, t.phash)],
 );

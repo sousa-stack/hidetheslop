@@ -1,14 +1,19 @@
 // Runs the real extension in throwaway headless browsers against a local stand-in for the
 // API, and checks the crowd's list end to end: what a list download sends, a match hiding
-// a drawn picture through Chrome's offscreen page and Firefox's background page, your own
-// Not AI beating the list, turning it off, and what hashing every inspected picture costs.
+// a drawn picture through Chrome's offscreen page and Firefox's background page, Report
+// this on that picture and the email it opens, your own Not AI beating the list, turning
+// it off, and what hashing every inspected picture costs. Last, phash-of.mjs must give the
+// same hash for the drawn picture as the extension did.
 // Run from this folder, after building: node crowd-check.mjs (or: node crowd-check.mjs chrome)
 //
 // It never reaches the live API: it uses vote-check.mjs's copies of dist/ pointed at this
 // machine, its temporary profiles and its drawn pictures, so nothing from test-images/ is
 // involved. The verdict list it serves is made up here.
+import { execFileSync } from 'node:child_process';
 import http from 'node:http';
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { finish, picture, pointAtLocal, startChrome, startFirefox, treeMb } from './vote-check.mjs';
 
@@ -17,6 +22,23 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const MODEL = here('models/Xenova/clip-vit-base-patch32/onnx/vision_model_int8.onnx');
 const FF_UUID = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee';
 const only = process.argv[2];
+
+// Report this opens its email through the background's tabs.update. In this run's own copy
+// of the build, that records each address in storage, where it survives the background
+// being stopped and started again, and then lets the real call go ahead, so the page can be
+// checked afterwards too.
+function recordReports(dir) {
+  const path = join(dir, 'background.js');
+  writeFileSync(path, `${readFileSync(path, 'utf8')}
+{
+  const tabs = SLOP_API.tabs;
+  const real = tabs.update;
+  tabs.update = (id, props) => SLOP_API.storage.local.get('testReports')
+    .then(({ testReports = [] }) => SLOP_API.storage.local.set({ testReports: [...testReports, props.url] }))
+    .then(() => real.call(tabs, id, props));
+}
+`);
+}
 
 async function makeFixtures() {
   return {
@@ -174,6 +196,8 @@ async function check(browser, ctx) {
   const own = await local(['ownVerdicts']);
   ok('a rating is remembered with its hash, sharing off', own.ownVerdicts?.length === 1 && own.ownVerdicts[0].phash === ctx.hashes.yours && own.ownVerdicts[0].label === 'real');
 
+  const version = await browser.evaluate(`SLOP_API.runtime.getManifest().version`);
+
   // The real content script on a real page, through the offscreen or background path.
   await goto(`${base}/feed.html`);
   const state = await until(async () => {
@@ -195,6 +219,34 @@ async function check(browser, ctx) {
   ok('a picture not on the list is not crowd-hidden', !after.find(([id]) => id === 'unlisted')[2].includes('crowd'), JSON.stringify(after.find(([id]) => id === 'unlisted')));
   ok('a picture you rated Not AI elsewhere is not crowd-hidden', !after.find(([id]) => id === 'yours')[2].includes('crowd'), JSON.stringify(after.find(([id]) => id === 'yours')));
   ok('hashing added no download: at most one by the page and one by the extension', ['listed', 'unlisted', 'yours'].every((n) => log.pictures[`/fixture/${n}.jpg`] <= 2), JSON.stringify(log.pictures));
+
+  // Show on the crowd-hidden picture asks whether it was AI, and offers Report this, as a
+  // plain link. Clicked from the page, the way a person would.
+  const bar = `document.querySelector('#listed > .hidetheslop-ph')?.shadowRoot`;
+  await browser.evaluate(`(${bar}.querySelector('button.show').click(), true)`);
+  const asked = await until(() => browser.evaluate(`(() => { const r = ${bar}; return r && /was this AI/.test(r.textContent) ? [...r.querySelectorAll('button')].map((b) => [b.textContent, b.className]) : null; })()`), 5000, 'the question').catch(() => null);
+  ok('after Show, the crowd-hidden picture offers Report this as a plain link', JSON.stringify(asked) === JSON.stringify([['AI, hide it', 'ai'], ['Not AI', 'ok'], ['Report this', 'link']]), JSON.stringify(asked));
+  const otherBars = await browser.evaluate(`document.querySelectorAll('#unlisted .hidetheslop-ph, #yours .hidetheslop-ph').length`);
+  ok('no other picture has a bar', otherBars === 0);
+  await browser.evaluate(`([...${bar}.querySelectorAll('button')].find((b) => b.textContent === 'Report this').click(), true)`);
+  await sleep(1500);
+  const stayed = await browser.evaluate(`location.pathname === '/feed.html' && !!${bar}`);
+  ok('the page stays where it was after Report this', stayed);
+  await browser.home();
+  const { testReports = [] } = await local(['testReports']);
+  const mailto = testReports[0] ?? null;
+  ok('Report this opened one email', testReports.length === 1, `${testReports.length}`);
+  const named = browser.name === 'firefox' ? 'Firefox' : 'Chrome, Edge or similar';
+  const expected = `This picture isn't AI, but the crowd's list hid it.\n\nFingerprint: ${ctx.hashes.listed}\n\n---\nHide the Slop ${version}, ${named}`;
+  let mail = null;
+  try {
+    const u = new URL(mailto);
+    mail = { protocol: u.protocol, to: u.pathname, keys: [...u.searchParams.keys()], subject: u.searchParams.get('subject'), body: u.searchParams.get('body') };
+  } catch { /* checked below */ }
+  ok('Report this opens an email to hello@hidetheslop.com with a subject and body only', mail?.protocol === 'mailto:' && mail.to === 'hello@hidetheslop.com' && mail.keys.join() === 'subject,body', mailto || 'nothing opened');
+  ok('its body is the picture\'s hash, the version and the browser, and nothing else', mail?.body === expected, JSON.stringify(mail?.body));
+  ok('nothing about the page is in it', !!mailto && !/127\.0\.0\.1|feed|fixture|listed|http/i.test(decodeURIComponent(mailto)));
+  ctx.mailto[browser.name] = mailto;
 
   // Back to an extension page for the rest.
   ctx.costs[browser.name] = {};
@@ -224,7 +276,7 @@ async function check(browser, ctx) {
 }
 
 const fixtures = await makeFixtures();
-const ctx = { gets: {}, costs: {}, hashes: {} };
+const ctx = { gets: {}, costs: {}, hashes: {}, mailto: {} };
 const { server, log, port } = await startServer(fixtures, (since) => (since === 0 ? { seq: 2, add: ctx.list.slice(0, 2), remove: [], more: true } : { seq: 3, add: ctx.list.slice(2), remove: [], more: false }));
 ctx.log = log;
 ctx.port = port;
@@ -234,6 +286,7 @@ const failures = [];
 for (const [name, boot] of [['chrome', startChrome], ['firefox', startFirefox]]) {
   if (only && only !== name) continue;
   const extension = pointAtLocal(name, port);
+  recordReports(extension);
   let browser = null;
   try {
     browser = await boot(extension);
@@ -272,6 +325,22 @@ for (const [name, gets] of Object.entries(ctx.gets)) {
 }
 console.log('\n=== The drawn pictures\' hashes');
 console.log(JSON.stringify(ctx.hashes));
+console.log('\n=== What Report this opened');
+for (const [name, url] of Object.entries(ctx.mailto)) console.log(`${name}: ${url}`);
+
+// phash-of.mjs on the same file, in its own headless Chrome, outside any extension.
+if (ctx.hashes.listed) {
+  const dir = mkdtempSync(join(tmpdir(), 'hts-phash-of-file-'));
+  try {
+    writeFileSync(join(dir, 'listed.jpg'), fixtures['listed.jpg']);
+    const printed = execFileSync(process.execPath, [here('phash-of.mjs'), join(dir, 'listed.jpg')], { encoding: 'utf8' }).trim();
+    const pass = printed === ctx.hashes.listed;
+    results.push({ name: 'phash-of.mjs prints the hash the extension worked out', pass });
+    console.log(`\n  ${pass ? 'PASS' : 'FAIL'}  phash-of.mjs prints the hash the extension worked out  ${printed} vs ${ctx.hashes.listed}`);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
 console.log('\n=== inspect() with and without the hash');
 console.log(JSON.stringify(ctx.costs, null, 1));
 

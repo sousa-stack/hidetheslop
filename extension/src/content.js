@@ -222,6 +222,10 @@
   // The picture to learn from when you rate a hidden post: the one that got it
   // hidden, or else the biggest one in it.
   const pictures = new WeakMap(); // hidden element -> image URL
+  // The hash of the picture the crowd's list hid, for Report this. Set only when hide()
+  // ran for that picture, and cleared by any later hide(), so a post hidden for another
+  // reason never offers it.
+  const crowdHashes = new WeakMap(); // hidden element -> phash
   function biggestPicture(el) {
     let best = null, bestArea = 0;
     for (const m of el.querySelectorAll('img, video[poster]')) {
@@ -238,7 +242,8 @@
   // Our bar, inside `el` so it goes away when the site removes the post.
   // buttons: [[label, onClick], ...]
   // Red with a cross for AI, green with a tick for not AI, so the answers read at a glance,
-  // and still apart if you can't tell red from green. Show is neutral: it isn't a verdict.
+  // and still apart if you can't tell red from green. Show is neutral: it isn't a verdict,
+  // and neither is a plain link, which has no icon.
   const BAR_ICONS = {
     show: '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
     ai: '<path d="M6 6l12 12M18 6L6 18"/>',
@@ -256,7 +261,7 @@
     return false;
   }
 
-  // `buttons` are [label, onClick, kind], kind being show, ai or ok.
+  // `buttons` are [label, onClick, kind], kind being show, ai, ok or link.
   function addBar(el, text, buttons) {
     const ph = document.createElement('div');
     ph.className = 'hidetheslop-ph';
@@ -279,14 +284,15 @@
         .ok { color: #fff; background: #1d7a3e; }
         .ai:hover { background: #a30000; }
         .ok:hover { background: #166532; }
+        .link { color: inherit; text-decoration: underline; text-underline-offset: 2px; padding: 6px 4px; }
       </style>
       <div><b>Hide the Slop</b><span></span></div>`;
     root.querySelector('span').textContent = text;
     for (const [label, onClick, kind] of buttons) {
       const b = document.createElement('button');
       b.type = 'button';
-      if (kind) {
-        b.className = kind;
+      if (kind) b.className = kind;
+      if (BAR_ICONS[kind]) {
         b.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${kind === 'show' ? 2.4 : 3.2}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${BAR_ICONS[kind]}</svg>`;
       }
       b.append(label);
@@ -302,9 +308,11 @@
   }
 
 
+  // Returns whether it hid `el`.
   function hide(el, reason, picture) {
-    if (!el || el.dataset.hidetheslop) return;
+    if (!el || el.dataset.hidetheslop) return false;
     el.dataset.hidetheslop = 'hidden';
+    crowdHashes.delete(el);
     hidden.push({ el, reason });
 
     if (settings.mode === 'remove') {
@@ -318,6 +326,7 @@
       addBar(el, `hid this: ${reason}`, [['Show', () => showAndAsk(el), 'show']]);
     }
     report();
+    return true;
   }
 
   // After Show, ask whether it really was AI. Your answer trains the picture check.
@@ -325,7 +334,7 @@
     reveal(el, true);
     const picture = pictures.get(el);
     if (!picture || !settings.visualCheck) return;
-    const ask = addBar(el, 'was this AI?', [
+    const buttons = [
       ['AI, hide it', () => {
         ask.remove();
         api.runtime.sendMessage({ type: 'learn', url: picture, label: 'ai', source: 'rated' }).catch(() => {});
@@ -338,7 +347,15 @@
         const thanks = addBar(el, "got it, it'll learn from this", []);
         setTimeout(() => thanks.remove(), 2500);
       }, 'ok'],
-    ]);
+    ];
+    // A wrong crowd verdict hides the picture for everyone, so it can go to Kevin as well.
+    const phash = crowdHashes.get(el);
+    if (phash) {
+      buttons.push(['Report this', () => {
+        api.runtime.sendMessage({ type: 'reportPicture', phash }).catch(() => {});
+      }, 'link']);
+    }
+    const ask = addBar(el, 'was this AI?', buttons);
   }
 
   function reveal(el, keepShown) {
@@ -414,10 +431,12 @@
     { rootMargin: '1200px 0px' }
   );
 
+  // Returns the element it hid, or null.
   function hideForImage(img, reason, picture = mediaUrl(img)) {
     const post = postOf(img);
-    if (post && post.dataset.hidetheslop) return; // already hidden, or the user chose to see it
-    hide(post || img, reason, picture);
+    if (post && post.dataset.hidetheslop) return null; // already hidden, or the user chose to see it
+    const el = post || img;
+    return hide(el, reason, picture) ? el : null;
   }
 
   // The frame a video is showing, as a data: URL, or null if it isn't ready yet.
@@ -488,7 +507,8 @@
         hideForImage(img, r.meta.reason.toLowerCase());
       } else if (r.crowd) {
         // Confirmed by people who share their ratings, so your robot's score doesn't matter.
-        hideForImage(img, 'the crowd flagged it');
+        const el = hideForImage(img, 'the crowd flagged it');
+        if (el && r.phash) crowdHashes.set(el, r.phash);
       } else if (r.score != null && r.score >= settings.visualCutoff) {
         hideForImage(img, 'the picture looks AI-made');
       }

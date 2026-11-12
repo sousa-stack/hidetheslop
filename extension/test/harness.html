@@ -28,6 +28,7 @@
     });
     window.lastStats = null;
     window.learned = [];
+    window.reported = [];
     // A hidden browser pane never reports what's on screen, so treat everything as visible.
     window.IntersectionObserver = class {
       constructor(cb) { this.cb = cb; }
@@ -43,6 +44,7 @@
           if (msg.type === 'stats') { window.lastStats = msg; return; }
           // The real model is checked by eval/test-vision.html; here we only test the wiring.
           if (msg.type === 'learn') { window.learned.push([msg.label, msg.url.split('/').pop(), msg.source]); return true; }
+          if (msg.type === 'reportPicture') { window.reported.push(msg.phash); return; }
           if (msg.type === 'check') {
             const blob = await (await fetch(msg.url)).blob();
             const bytes = new Uint8Array(await blob.arrayBuffer());
@@ -50,11 +52,13 @@
             await crowdReady;
             const phash = msg.picture ? (await SlopHash.fromBlob(blob)).phash : undefined;
             const u = new URL(msg.url);
-            return {
+            const reply = {
               meta: msg.meta ? SlopMeta.scan(bytes) : null,
               score: msg.picture ? (msg.url.includes('looks-ai') ? 0.95 : 0.05) : null,
               crowd: msg.picture ? await SlopCrowd.flagged(u.origin + u.pathname, phash) : false,
             };
+            if (reply.crowd) reply.phash = phash;
+            return reply;
           }
         },
       },

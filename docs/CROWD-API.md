@@ -93,7 +93,7 @@ The aggregate job runs hourly inside the API, and once 30 seconds after startup,
    - Fewer than 5 votes: `pending`.
    - 5 or more, and one side has at least 80% of the weight: `confirmed`, with that label.
    - 5 or more otherwise: `disputed`.
-4. **Publish.** `published` is true only for `confirmed` + `ai`. When it flips, the verdict takes the next `seq`, so clients can fetch just what changed.
+4. **Publish.** `published` is true only for `confirmed` + `ai`, and never while the picture's root, or any hash merged into it, is within 6 bits of a blocked hash (below). When it flips, the verdict takes the next `seq`, so clients can fetch just what changed.
 5. **Expire.** Delete pictures with fewer than 5 votes whose root was first seen more than 90 days ago, including their merged hashes.
 
 These numbers live in `api/src/config.ts` and are starting points. They'll need tuning once real votes arrive.
@@ -152,8 +152,25 @@ The AUC differences are noise. A bigger scale keeps more detail in the small val
 - **Your own verdicts win.** Every rating also lands in `ownVerdicts` as `{key, phash, label}`, at most 2,000, whether or not you share. A picture you rated Not AI is never crowd-hidden, by its address or within 3 bits, and Not AI ratings from before 1.9.0 count by address. **Forget them** clears it.
 - **Firefox.** `origin-rules.json` covers GETs as well as POSTs, and `listAllowed()` fetches only with site access for the API and the `strip-origin` ruleset on. It doesn't need the data permission. Firefox 160 sent no `Origin` on this GET even with the rule off (a POST did), so the rule is a guard for a later version that might.
 - **Safari.** The same as Firefox, plus the canary above: `listAllowed()` waits for `slopStripReady()`.
+- **Report this,** from 1.11.0. After **Show** on a picture the crowd hid, the bar that asks whether it was AI adds **Report this**, a plain link. It asks the background to open a `mailto:` to hello@hidetheslop.com, so the site can't catch the click, holding the picture's 16-digit hash, the version and the browser, and nothing about the page. Sending it is up to you, from your own email, so nothing about it goes through the API and there's still no per-image lookup. `check()` returns the hash only for a crowd match, and `content.js` keeps it per hidden element only when it really hid that element, using the flagged picture's own hash. Not offered for a lone picture blurred in place, which has only the hover **Show**, in **Remove it completely** mode, or with your robot off. Reports are deleted once they've been acted on.
 
-**Known gap, not built yet: a forged verdict hides a picture for everyone.** Enough fake installs voting AI on a real picture would publish it, and the aggregate job recomputes `published` every hour, so the only way to take one back today is deleting its votes by hand, which needs Kevin's OK. A block list the job respects comes before launch (ROADMAP.md).
+### Blocking a verdict
+
+Enough fake installs voting AI on a real picture would publish it, and the job recomputes `published` every hour, so deleting votes by hand wouldn't hold. Instead Kevin blocks the picture by its hash, on the droplet, in `~/hidetheslop`:
+
+```bash
+docker compose exec -T api node dist/block.js list
+docker compose exec -T api node dist/block.js block <phash> --note "a short reminder"
+docker compose exec -T api node dist/block.js unblock <phash>
+```
+
+- **What's stored.** `blocked_hashes`: a random id, the hash version, the hash and an optional note of up to 80 characters. No time, no reporter and no address. One row per hash, so blocking twice changes nothing. `pg_dump` includes it, so blocks survive a restore.
+- **What a block covers.** Every stored hash within 6 bits (`BLOCK_MAX_BITS`), so the root and any hash merged into it. That's wider than the 3 bits a merge uses, because a block errs on the side of not hiding: copies measured up to 4 bits apart, flyers from one template 8 or more, and different pictures 12 or more, and distances come in twos. The job compares against every blocked row instead of using the bands, because 6 flipped bits can land in all four bands. The verdict's status, label and counts still follow the votes, so the crowd's answer stays visible. A block before anyone has voted holds too.
+- **When it takes effect.** `block` and `unblock` run the job straight away, so `/v1/verdicts` sends the `remove` or `add` at once, and installs pick it up at their next fetch: within 6 hours, plus up to an hour of cache. If the hourly run holds the lock, they try again for about a minute, because a run that started before the change can't see it. If it still can't run, they print "saved; it takes effect at the next run" instead of claiming it's done.
+- **Unblocking is rarely right.** The votes stay after a block, so unblocking a forgery publishes it again.
+- **What it accepts.** A hash must be exactly 16 lowercase hex digits with the top bit 0. A note can't hold `://`, `http` or a line break. Errors never repeat what was typed, and a database error prints only its SQLSTATE. A hash typed on the droplet does land in the shell's history, which is low risk.
+- **Finding the hash.** From a **Report this** email, or, for a picture Kevin has as a file, `cd eval && node phash-of.mjs <file>`, which runs the real `phash.js` in headless Chrome for Testing. `list` shows each block in hash order, how many pictures it's holding back, and how far it is from the nearest published one.
+- **Asking first.** `list` is fine without asking. `block` and `unblock` need Kevin's OK each time, because they change what every install hides, and `unblock` deletes a row.
 
 Only people with the picture check on can rate today, because `learn()` needs the embedding. Verdicts for people without the model would mean downloading Facebook pictures again, which 1.5 stopped doing, so that comes later.
 

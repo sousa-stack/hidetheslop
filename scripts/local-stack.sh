@@ -143,7 +143,12 @@ psql_in() {
 }
 sql() { psql_in hidetheslop "$1"; }
 
-new_phash() { openssl rand -hex 8; }
+# The top bit 0, like every hash the extension makes, so block.js takes it.
+new_phash() {
+  local h
+  h="$(openssl rand -hex 8)"
+  printf '%x%s\n' "$((0x${h:0:1} & 7))" "${h:1}"
+}
 new_token() { openssl rand -hex 16; }
 
 # Everything the logs must never hold.
@@ -204,7 +209,7 @@ check_caddy_only_on_loopback() {
 
 check_migrations() {
   compose run --rm -T api node dist/migrate.js | grep -q 'migrations applied' || return 1
-  [ "$(sql "select count(*) from information_schema.tables where table_schema = 'public'")" = 4 ]
+  [ "$(sql "select count(*) from information_schema.tables where table_schema = 'public'")" = 5 ]
 }
 
 check_health() {
@@ -261,6 +266,59 @@ check_votes_reach_verdicts() {
   headers="$(api -D - -o /dev/null "$(api_url '/v1/verdicts?hashVersion=1')")"
   echo "$headers" | grep -qi '^cache-control: public, max-age=3600' \
     || { echo "$headers"; return 1; }
+}
+
+block_cli() { compose exec -T api node dist/block.js "$@"; }
+
+latest_seq() { api "$(api_url '/v1/verdicts?hashVersion=1')" | sed -n 's/.*"seq":\([0-9]*\).*/\1/p'; }
+
+aggregate_lock_held() {
+  [ "$(sql "select count(*) from pg_locks where locktype = 'advisory' and objid = 487204116 and granted")" = 1 ]
+}
+
+# Block the published picture while another session holds the aggregate lock, as the hourly
+# run would, so block.js has to wait for it; then unblock it. The block of a hash nobody has
+# voted on stays, so the restore check below carries a block through a dump.
+check_block_round_trip() {
+  local seq out started waited holder fresh
+  seq="$(latest_seq)"
+  [ -n "$seq" ] || { echo "no seq"; return 1; }
+  compose exec -T db sh -c 'exec psql -X -q -U "$POSTGRES_USER" -d "$POSTGRES_DB" -c "select pg_advisory_lock(487204116), pg_sleep(8)"' >/dev/null &
+  holder=$!
+  for _ in $(seq 1 50); do aggregate_lock_held && break; sleep 0.2; done
+  aggregate_lock_held || { echo "couldn't take the lock"; wait "$holder"; return 1; }
+  started=$(date +%s)
+  out="$(block_cli block "$PUBLISHED" --note 'local-stack check')" || { echo "$out"; wait "$holder"; return 1; }
+  waited=$(( $(date +%s) - started ))
+  wait "$holder"
+  echo "block, after waiting ${waited}s for the lock:"
+  echo "$out" | sed 's/^/  /'
+  [ "$waited" -ge 4 ] || { echo "it didn't wait for the lock"; return 1; }
+  [ "$out" = "$(printf 'blocked\nthe job ran: 1 picture taken off the list, and /v1/verdicts sends the remove now')" ] || return 1
+  api "$(api_url "/v1/verdicts?hashVersion=1&since=$seq")" | grep -q "\"remove\":\[\"$PUBLISHED\"\]" \
+    || { echo "no remove"; return 1; }
+  if api "$(api_url '/v1/verdicts?hashVersion=1')" | grep -q "$PUBLISHED"; then echo "still listed"; return 1; fi
+  out="$(block_cli list)" || return 1
+  echo "list:"
+  echo "$out" | sed 's/^/  /'
+  echo "$out" | grep -q "^$PUBLISHED  holds back 1 picture, nothing published  \"local-stack check\"$" || return 1
+
+  seq="$(latest_seq)"
+  out="$(block_cli unblock "$PUBLISHED")" || { echo "$out"; return 1; }
+  echo "unblock:"
+  echo "$out" | sed 's/^/  /'
+  [ "$out" = "$(printf 'unblocked\nthe job ran: 1 picture back on the list, and /v1/verdicts sends the add now')" ] || return 1
+  api "$(api_url "/v1/verdicts?hashVersion=1&since=$seq")" | grep -q "\"add\":\[\"$PUBLISHED\"\]" \
+    || { echo "no add"; return 1; }
+
+  fresh="$(new_phash)"
+  remember "$fresh"
+  out="$(block_cli block "$fresh")" || { echo "$out"; return 1; }
+  [ "$out" = "$(printf 'blocked\nthe job ran: nothing within 6 bits was on the list')" ] || { echo "$out"; return 1; }
+  [ "$(sql 'select count(*) from blocked_hashes')" = 1 ] || return 1
+  # A refused argument isn't echoed.
+  if out="$(block_cli block "${fresh}0" 2>&1)"; then echo "took a 17-digit hash"; return 1; fi
+  if echo "$out" | grep -q "$fresh"; then echo "echoed the hash"; return 1; fi
 }
 
 check_embedding_gate() {
@@ -662,7 +720,7 @@ check_no_secrets_exposed() {
 }
 
 counts_in() {
-  psql_in "$1" 'select (select count(*) from hashes), (select count(*) from votes), (select count(*) from verdicts), (select count(*) from embeddings)'
+  psql_in "$1" 'select (select count(*) from hashes), (select count(*) from votes), (select count(*) from verdicts), (select count(*) from embeddings), (select count(*) from blocked_hashes)'
 }
 
 check_restore() {
@@ -775,6 +833,7 @@ cmd_check() {
   line "/health works through Caddy" check_health
   line "/ on the status host reaches Uptime Kuma" check_status_page
   line "5 votes with 5 tokens reach /v1/verdicts after the job, with the cache header" check_votes_reach_verdicts
+  line "block.js: block waits out a held lock and sends the remove, list, unblock sends the add" check_block_round_trip
   line "embedding gate: nothing at 2 votes, asked at 3, stored" check_embedding_gate
   line "an extra url field is rejected" check_extra_field
   line "64,000 bytes accepted, 64,001 refused" check_body_limit
@@ -792,7 +851,7 @@ cmd_check() {
   line "backup.sh encrypts: the stored name and file aren't readable, 14 kept locally" check_backup_encrypted
   line "backup.sh calls the monitor after a good run" check_ping
   line "no secret on a command line, in output or left on disk" check_no_secrets_exposed
-  line "restore.sh round trip: row counts match, verdict_seq jumps, says so" check_restore
+  line "restore.sh round trip: row counts match, blocks included, verdict_seq jumps, says so" check_restore
   line "restore.sh refuses the live database" check_restore_refuses_live
   line "restore.sh refuses a dump with no completion marker" check_restore_refuses_cut_dump
   line "a failed upload exits non-zero, keeps the local dump, skips the monitor" check_failed_upload

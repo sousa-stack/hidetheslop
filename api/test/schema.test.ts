@@ -18,9 +18,9 @@ const columns = () =>
     where table_schema = 'public'
   `);
 
-test('the migrations made the four tables, and nothing else', async () => {
+test('the migrations made the five tables, and nothing else', async () => {
   const tables = new Set((await columns()).map((column) => column.table_name));
-  assert.deepEqual([...tables].sort(), ['embeddings', 'hashes', 'verdicts', 'votes']);
+  assert.deepEqual([...tables].sort(), ['blocked_hashes', 'embeddings', 'hashes', 'verdicts', 'votes']);
 });
 
 test('no column is named like an IP, a URL, a user, an email or a voter', async () => {
@@ -29,10 +29,10 @@ test('no column is named like an IP, a URL, a user, an email or a voter', async 
   assert.deepEqual(found, []);
 });
 
-test('votes has no date or time column', async () => {
+test('votes and blocked_hashes have no date or time column', async () => {
   const dated = [...(await columns())].filter(
     (column) =>
-      column.table_name === 'votes' &&
+      (column.table_name === 'votes' || column.table_name === 'blocked_hashes') &&
       /date|time|interval/i.test(`${column.data_type} ${column.column_name}`),
   );
   assert.deepEqual(dated, []);
@@ -62,4 +62,22 @@ test('the indexes backup.sh clusters on exist and start with a random uuid', asy
     where table_name = 'hashes' and column_name = 'id'
   `);
   assert.equal(id?.column_default, 'gen_random_uuid()');
+});
+
+test('blocked_hashes has a random id, one row per hash, and only these columns', async () => {
+  const blocked = [...(await columns())]
+    .filter((column) => column.table_name === 'blocked_hashes')
+    .map((column) => column.column_name)
+    .sort();
+  assert.deepEqual(blocked, ['hash_version', 'id', 'note', 'phash']);
+  const [id] = await db.execute<{ column_default: string }>(sql`
+    select column_default from information_schema.columns
+    where table_name = 'blocked_hashes' and column_name = 'id'
+  `);
+  assert.equal(id?.column_default, 'gen_random_uuid()');
+  const [unique] = await db.execute<{ n: number }>(sql`
+    select count(*)::integer as n from pg_constraint
+    where conname = 'blocked_hashes_version_phash_unique' and contype = 'u'
+  `);
+  assert.equal(unique?.n, 1);
 });

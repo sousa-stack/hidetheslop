@@ -1,6 +1,6 @@
 // Shared by the content script, background, popup and options page.
 /* exported SLOP_API, SLOP_ORIGINS, SLOP_DEFAULTS, slopGetSettings, slopGetShare, slopIsFirefox, slopIsSafari,
-   slopCanSeeSites, slopAskToShare, slopArmStrip, slopStripReady, slopRequestTimeout */
+   slopCanSeeSites, slopAskToShare, slopArmStrip, slopStripReady, slopRequestTimeout, slopBrowserName */
 
 var SLOP_API = globalThis.browser ?? globalThis.chrome;
 
@@ -54,6 +54,11 @@ function slopRequestTimeout() {
 function slopIsSafari() {
   if (SLOP_API.runtime.getManifest?.().browser_specific_settings?.safari) return true;
   return !!SLOP_API.runtime.getURL?.('').startsWith('safari-web-extension:');
+}
+
+// For the reports you email yourself: which browser, and nothing more specific.
+function slopBrowserName() {
+  return slopIsSafari() ? 'Safari' : slopIsFirefox() ? 'Firefox' : 'Chrome, Edge or similar';
 }
 
 // Whether you've allowed every site. Chrome grants it at install, so a check that fails
