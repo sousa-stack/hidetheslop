@@ -1,8 +1,13 @@
 {
-  // hidetheslop.com. A static site: the pages are served from assets without running any
-  // script, so they're free. worker.js runs first only for /.well-known/origin-check, the
-  // Safari build's check that its Origin is stripped, and otherwise only for a 404. Nothing
-  // it sees is logged.
+  // hidetheslop.com. A static site: the pages and pictures are served from assets without
+  // running any script, so they're free. worker.js runs first only for:
+  //   /.well-known/origin-check  the Safari build's check that its Origin is stripped
+  //   /hit/*                     the 1x1 image on each page, which adds one to today's total
+  //   /get/*                     the install buttons, which add one and redirect to the store
+  //   /stats                     the totals, only with the STATS_TOKEN secret, else a 404
+  // and otherwise only for a 404. The totals live in the Totals Durable Object (SQLite, on
+  // the free plan) as day, name and count, with nothing about who. Nothing it sees is logged.
+  // The stats token is set with: npx wrangler@4.156.0 secret put STATS_TOKEN
   // Build first with: node build.mjs
   "name": "hidetheslop-site",
   "main": "worker.js",
@@ -10,9 +15,17 @@
   "assets": {
     "directory": "./dist",
     "binding": "ASSETS",
-    "run_worker_first": ["/.well-known/origin-check"]
+    "run_worker_first": ["/.well-known/origin-check", "/hit/*", "/get/*", "/stats"]
   },
+  "durable_objects": {
+    "bindings": [{ "name": "TOTALS", "class_name": "Totals" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Totals"] }],
   "observability": { "enabled": false },
+  // Only hidetheslop.com serves it. The account needs a workers.dev subdomain for the
+  // Durable Object, but this Worker stays off it, preview URLs included.
+  "workers_dev": false,
+  "preview_urls": false,
   "routes": [
     { "pattern": "hidetheslop.com", "custom_domain": true },
     { "pattern": "www.hidetheslop.com", "custom_domain": true }

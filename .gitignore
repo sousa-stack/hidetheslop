@@ -25,3 +25,4 @@ DerivedData/
 .claude/
 .wrangler/
 site/originals/
+.dev.vars

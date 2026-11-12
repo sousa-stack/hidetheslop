@@ -9,6 +9,14 @@ h1 { text-align: center; }
 .pitch { margin: 6px 0 0; font-size: 17px; text-align: center; }
 .install { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 20px; }
 .soon { padding: 9px 14px; border: 2px solid var(--ink); border-radius: 4px; font-weight: 600; }
+/* GitHub's mark, unmodified and set apart from the words, as GitHub's logo rules ask. Ink,
+   not red, because red on amber is too faint for small text. */
+.github { margin: 18px 0 0; text-align: center; }
+.github a { display: inline-flex; align-items: center; gap: 10px; color: var(--ink); font-weight: 700; text-decoration: none; }
+.github svg { flex: none; width: 22px; height: 22px; }
+.github span { text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.github a:hover span { text-decoration-thickness: 2px; }
+.github a:focus-visible { outline-color: var(--ink); outline-offset: 4px; }
 
 .copy p { margin: 10px 0 0; }
 .copy .rule { margin: 0 0 8px; font-size: 21px; font-weight: 700; line-height: 1.25; }
@@ -66,6 +74,11 @@ h1 { text-align: center; }
 .faq summary { cursor: pointer; font-size: 18px; font-weight: 700; }
 
 .after .links { text-align: center; }
+.after .links a + a { margin-left: 22px; }
+
+/* The counting image (/hit/home, /hit/privacy). Pinned to the corner and invisible, so it
+   never moves anything, whether it loads or not. */
+.hit { position: absolute; top: 0; left: 0; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
 
 /* The privacy policy is for reading, so it drops the big-word rows. */
 .plate.short { display: flex; align-items: center; gap: 20px; padding: 22px 40px; }
