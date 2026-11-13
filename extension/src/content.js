@@ -667,9 +667,81 @@
       // button does that instead.
       if (el.dataset.hidetheslop === 'hidden') return el;
       if (el.closest('[data-hidetheslop="hidden"]')) return null;
+      if (isBackdrop(el)) return null;
       return el;
     }
     return null;
+  }
+
+  // Off the feeds, a big photo with a headline drawn over it is the page's scenery, not
+  // something anyone posted, so it gets no button. Looking through overlays is what puts
+  // the button on it, and on the feeds that looking through is needed: carousel arrows,
+  // "+3" tiles and captions over reels sit on real posts. So this never runs on a feed
+  // site, and it's worked out once per picture from the layout, never on each mouse move.
+  let backdrops = new WeakMap(); // picture -> true or false
+  window.addEventListener('resize', () => (backdrops = new WeakMap()), { passive: true });
+
+  function isBackdrop(pic) {
+    if (site) return false;
+    let known = backdrops.get(pic);
+    if (known === undefined) {
+      known = looksLikeBackdrop(pic);
+      backdrops.set(pic, known);
+    }
+    return known;
+  }
+
+  function looksLikeBackdrop(pic) {
+    if (pic.tagName === 'VIDEO' && pic.controls) return false; // made to be watched
+    const r = pic.getBoundingClientRect();
+    if (r.width < Math.min(window.innerWidth, scrollerWidth(pic)) * 0.6) return false;
+    // Laid out as scenery: the picture, or a wrapper with the same box (what object-fit:
+    // cover gives a picture filling its parent), is pinned to the window or pushed behind
+    // the page. Absolute position alone doesn't count: many sites place an article's main
+    // photo that way (Next.js images, for one), and an AI header on a blog post is exactly
+    // the kind of picture the button is for.
+    for (let node = pic, i = 0; node && node !== document.body && i < 5; node = node.parentElement, i++) {
+      if (i && !sameBox(node.getBoundingClientRect(), r)) break;
+      const style = getComputedStyle(node);
+      if (style.position === 'fixed' || parseInt(style.zIndex, 10) < 0) return true;
+    }
+    // Or a block of text sits on it, from a part of the page beside it rather than around
+    // it. Short bits like "+3", "ALT" or "0:15" are badges on a real picture. A fixed or
+    // sticky menu bar only covers it because of where the page happens to be scrolled.
+    for (let node = pic, i = 0; node.parentElement && node.parentElement !== document.documentElement && i < 4; node = node.parentElement, i++) {
+      const kids = node.parentElement.children;
+      for (let k = 0; k < kids.length && k < 100; k++) {
+        const other = kids[k];
+        if (other === node || other.classList.contains('hidetheslop-ph')) continue;
+        if (!overlaps(other.getBoundingClientRect(), r) || !hasText(other, 20)) continue;
+        if (!/fixed|sticky/.test(getComputedStyle(other).position)) return true;
+      }
+    }
+    return false;
+  }
+
+  // The width the picture is measured against: its scrolling box's, or else the window's.
+  function scrollerWidth(pic) {
+    for (let node = pic.parentElement; node && node !== document.body; node = node.parentElement) {
+      const style = getComputedStyle(node);
+      if (/auto|scroll|overlay/.test(style.overflowX + style.overflowY)) return node.clientWidth;
+    }
+    return window.innerWidth;
+  }
+
+  const sameBox = (a, b) =>
+    Math.abs(a.left - b.left) < 2 && Math.abs(a.top - b.top) < 2 && Math.abs(a.right - b.right) < 2 && Math.abs(a.bottom - b.bottom) < 2;
+  const overlaps = (a, b) => Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 && Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1;
+
+  // Counts letters until it has enough, so a big neighbour costs no more than a small one.
+  function hasText(el, min) {
+    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    let count = 0;
+    for (let n = walker.nextNode(), i = 0; n && i < 200; n = walker.nextNode(), i++) {
+      count += n.data.replace(/\s+/g, '').length;
+      if (count >= min) return true;
+    }
+    return false;
   }
 
   // A big square picture cut into a circle is a profile photo, not a post.

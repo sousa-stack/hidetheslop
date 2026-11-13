@@ -255,6 +255,7 @@ It's free and open source, at [github.com/sousa-stack/hidetheslop](https://githu
 | Categories (up to 2) | **Social & Communication** and **Photos, Music & Videos**, from AMO's current list. Not Privacy & Security, for the same reason as on Chrome |
 | Tags | `content blocker`, `social media`, `facebook`, `reddit`, `pinterest`, `youtube`, `twitter`. AMO only takes tags from its own fixed list, which has no Instagram, TikTok or "AI" tag |
 | Homepage | https://hidetheslop.com |
+| Contributions URL | https://buymeacoffee.com/sousastack, the same link as the site and Settings |
 | Support email | hello@hidetheslop.com |
 | Support website | https://hidetheslop.com |
 | License | **MIT** (pick it from the list; no custom text) |

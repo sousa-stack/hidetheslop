@@ -1,6 +1,11 @@
 # Changelog
 
 
+## Unreleased
+- **No button on a site's backdrop.** On ordinary websites, the **Hide slop** button no longer turns up on a big photo or looping video behind a headline. It looked through the text to the picture under it, because Facebook and others lay empty boxes over their photos and it has to look through those. Now a picture counts as a backdrop when it's at least 60% as wide as the window (or its scrolling box) and it's either laid out as scenery, pinned to the window or pushed behind the page, or has a block of 20 or more letters laid over it from beside it. Badges like "+3", "ALT" or "0:15" don't count, and nor does a video with controls. It's worked out once per picture and again after a resize. A picture already blurred keeps its **Show** button. Being placed with absolute position doesn't count on its own, because many sites place an article's main photo that way.
+- Feed sites are unchanged, and so is the picture check: your robot still looks at backdrops.
+- `extension/test/backdrop.html` hovers eleven such pictures and says where the button appeared.
+
 ## 1.11.0
 - **Report this,** on a picture the crowd hid. After **Show**, the bar that asks whether it was AI has a third link, which opens your own email app with the picture's 16-digit fingerprint, the version and the browser filled in, and nothing about the page. You choose whether to send it. A wrong verdict hides a picture for everyone, and this is how Kevin finds out. It isn't offered for a lone picture blurred in place, in **Remove it completely** mode, or with your robot off.
 - The privacy policy says what a report holds.

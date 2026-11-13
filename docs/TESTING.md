@@ -108,6 +108,14 @@ After **Show**, crowd's bar asks whether it was AI and has **Report this**, a pl
 
 `window.learned` records rating messages as `[label, file, source]`. **AI, hide it** and **Not AI** must say `rated`, and the hover button `hid`. The hover button's shadow root is closed, so it needs a real mouse. A post hidden for its label or tags gets no **was this AI?** question.
 
+## Backdrops: `extension/test/backdrop.html`
+
+This runs the real `content.js` on an ordinary page, so no feed rules apply, and checks the hover button stays off a site's backdrop. Serve the top folder as above and open `http://localhost:8767/extension/test/backdrop.html`. It hovers each picture by itself, sending mouse moves to set points and waiting past the hover delay, and takes about 30 seconds. The button's host is found by its style, since its shadow root is closed, and it only counts if it's on the picture being hovered. The results are on the page and in `window.backdropResults` (`done`, `passed`, `failed`, and one row per point). Use a window at least 1000 px wide, and don't scroll while it runs, because scrolling drops the button. The cases:
+- **No button:** a hero picture under a headline column narrower than it, at its centre and its edges; the same with the text at `pointer-events: none`; a photo in the flow with a headline laid over it from a sibling; and a muted looping hero video with no controls.
+- **Button:** a photo under a Facebook-style empty link with an `aria-label` and an empty box; a "+3" tile; a cropped photo in an article's flow with a caption under it; a photo with a corner button in a full-size wrapper; a video with controls and a title over it; and a hero that was already blurred, which keeps its **Show**.
+
+All 28 points passed in Chrome for Testing 156 and Firefox 160 on 2026-11-13, headless, along with the harness's expected states and real-mouse hovers on its feed, including a hero added to it, which still gets the button there. With the `content.js` from before this check, the 16 no-button points all failed.
+
 ## The vote client: `extension/test/votes.test.mjs`
 
 This runs the real `votes.js` with fake storage and a fake network, so nothing reaches the API. It covers the token against a vector worked out with Python's `hmac`, off meaning off, the queue, every reply, races, near copies, and that nothing but the agreed fields goes in a body. The last two tests read `api/src/` and the build, and fail if the schema or the manifest moves.
