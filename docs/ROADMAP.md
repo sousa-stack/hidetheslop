@@ -9,10 +9,12 @@ Hide the Slop stays free and open source, on every platform we can reach. It sho
 Updated 2026-11-01. Start here.
 
 **Live:**
-- [hidetheslop.com](https://hidetheslop.com) and its privacy policy, on Cloudflare Workers. The install buttons say "coming soon".
+- [hidetheslop.com](https://hidetheslop.com) and its privacy policy, on Cloudflare Workers. Since 2026-11-16 the Chrome, Firefox and Edge buttons install it, with Edge going to the Chrome listing. Safari's says "coming soon".
 - The model at `models.hidetheslop.com`, on Cloudflare R2, with Hugging Face as the fallback.
 - `hello@hidetheslop.com`, forwarding to Kevin's Gmail. Tested.
 - The API at `api.hidetheslop.com` and the status page at `status.hidetheslop.com`, on the droplet behind Cloudflare. Checked live: direct access is blocked, input rules and rate limits work, verdicts are cached, and no client IPs are in the logs. It holds Kevin's test votes and its first published verdict.
+- The extension on Firefox Add-ons, version 1.11.0: [addons.mozilla.org/firefox/addon/hide-the-slop](https://addons.mozilla.org/firefox/addon/hide-the-slop/), public when checked on 2026-11-16.
+- The extension in the Chrome Web Store, version 1.11.0: [chromewebstore.google.com/detail/ijoplnhgjdnkohkifananhbeonndcnll](https://chromewebstore.google.com/detail/ijoplnhgjdnkohkifananhbeonndcnll), public when checked on 2026-11-16. Safari is submitted with manual release, and Edge is put off and installs from the Chrome listing (`docs/store/browser-stores.md`).
 
 **Built, not live:**
 - The extension, version 1.9.0: voting, off by default, and hiding pictures the crowd flagged, on by default. Not in any store. Tested for real on 2026-11-11: votes from Chrome, Firefox, Arc and second profiles, Firefox's own consent prompt, an embedding sent once a picture reached 3 installs, and one AI picture reaching 5 installs, confirmed and published in `/v1/verdicts` through Cloudflare. All five installs gave that picture the identical hash.

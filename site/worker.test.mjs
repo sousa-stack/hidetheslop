@@ -137,7 +137,7 @@ test('only GET counts', async () => {
 
 test('each install button counts once and redirects to its store', async () => {
   const c = counter();
-  const stores = { chrome: 'https://hidetheslop.com/', firefox: 'https://hidetheslop.com/', edge: 'https://hidetheslop.com/', safari: 'https://apps.apple.com/app/id6834020766' };
+  const stores = { chrome: 'https://chromewebstore.google.com/detail/hide-the-slop/ijoplnhgjdnkohkifananhbeonndcnll', firefox: 'https://addons.mozilla.org/firefox/addon/hide-the-slop/', edge: 'https://chromewebstore.google.com/detail/hide-the-slop/ijoplnhgjdnkohkifananhbeonndcnll', safari: 'https://apps.apple.com/app/id6834020766' };
   for (const [browser, url] of Object.entries(stores)) {
     const res = await call(c.env, `/get/${browser}`);
     assert.equal(res.status, 302, browser);

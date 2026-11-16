@@ -12,12 +12,12 @@
 // Nothing is logged; observability is off in wrangler.jsonc.
 const ORIGIN_CHECK = '/.well-known/origin-check';
 
-// Where each install button goes. Chrome, Firefox and Edge get their listing URLs once
-// each store approves them; until then they land back on the home page.
+// Where each install button goes. Edge has no listing of its own yet and installs from the
+// Chrome Web Store, so its button goes there and is still counted as Edge.
 const STORES = {
-  chrome: 'https://hidetheslop.com/',
-  firefox: 'https://hidetheslop.com/',
-  edge: 'https://hidetheslop.com/',
+  chrome: 'https://chromewebstore.google.com/detail/hide-the-slop/ijoplnhgjdnkohkifananhbeonndcnll',
+  firefox: 'https://addons.mozilla.org/firefox/addon/hide-the-slop/',
+  edge: 'https://chromewebstore.google.com/detail/hide-the-slop/ijoplnhgjdnkohkifananhbeonndcnll',
   safari: 'https://apps.apple.com/app/id6834020766',
 };
 const PAGES = ['home', 'privacy'];

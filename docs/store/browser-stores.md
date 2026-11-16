@@ -4,13 +4,13 @@ What goes into the Chrome Web Store, Microsoft Edge Add-ons and addons.mozilla.o
 
 Edge uses the Chrome zip (`dist/hidetheslop-chrome-1.11.0.zip`); Firefox uses `dist/hidetheslop-firefox-1.11.0.zip`.
 
-**Status:** Chrome submitted on 2026-11-12. Edge is put off: Edge can install from the Chrome Web Store, so the site's Edge button points at the Chrome listing until Edge has its own. Firefox submitted on 2026-11-12, with its icon, screenshots, homepage and tags. Record each item ID and listing URL here as it's created:
+**Status:** Chrome submitted on 2026-11-12, and approved: 1.11.0 was public in the Chrome Web Store on 2026-11-16. Edge is put off: Edge can install from the Chrome Web Store, so the site's Edge button points at the Chrome listing until Edge has its own. Firefox submitted on 2026-11-12, with its icon, screenshots, homepage and tags, and approved: 1.11.0 was public on AMO on 2026-11-16. Record each item ID and listing URL here as it's created:
 
 | Store | Item ID | Listing URL | Live |
 |---|---|---|---|
-| Chrome Web Store | ijoplnhgjdnkohkifananhbeonndcnll | https://chromewebstore.google.com/detail/ijoplnhgjdnkohkifananhbeonndcnll | Submitted 2026-11-12, in review |
+| Chrome Web Store | ijoplnhgjdnkohkifananhbeonndcnll | https://chromewebstore.google.com/detail/ijoplnhgjdnkohkifananhbeonndcnll | Live. Submitted 2026-11-12, and public with 1.11.0 when checked on 2026-11-16 |
 | Edge Add-ons | | | Put off on 2026-11-12: Partner Center's sign-up was blocked by Microsoft's risk check. Edge installs from the Chrome listing until then |
-| AMO | hidetheslop@hidetheslop.com | https://addons.mozilla.org/firefox/addon/hide-the-slop/ | Submitted 2026-11-12, awaiting review. Listed for Firefox, and for Firefox for Android because the manifest names an Android minimum |
+| AMO | hidetheslop@hidetheslop.com | https://addons.mozilla.org/firefox/addon/hide-the-slop/ | Live. Submitted 2026-11-12, and public with 1.11.0 when checked on 2026-11-16. Listed for Firefox, and for Firefox for Android because the manifest names an Android minimum |
 
 ## Two things to settle before uploading
 
