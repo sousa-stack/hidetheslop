@@ -30,7 +30,7 @@ extension/          the extension
   src/              source; loaded as-is, no bundler
   build.mjs         writes dist/chrome and dist/firefox (+ zips) and dist/safari; holds the version number
   test/             unit test, fake-feed harness, live page, settings preview
-  tools/            make_icons.sh (icons from brand/logo-1024.png)
+  tools/            make_icons.sh (icons from brand/logo-1024.png), publish-chrome.mjs and publish-firefox.mjs (the release workflow's store uploads)
 api/                the server: Fastify, TypeScript, Drizzle, Postgres
   src/              routes/, db/schema.ts, jobs/aggregate.ts, config.ts, block.ts (the block list command)
   drizzle/          generated migrations, committed
@@ -45,7 +45,7 @@ site/               hidetheslop.com and the privacy policy
   tools/            optimize_images.py (small WebP files from originals/, which isn't in git)
 docker-compose.yml, Caddyfile, deploy.sh, harden.sh, backup.sh, restore.sh   production
 scripts/            local-stack.sh (proves the production stack on this Mac), backup-rclone.sh (shared by backup.sh and restore.sh)
-.github/workflows/  tests the API and deploys it
+.github/workflows/  deploy.yml tests the API and deploys it; release.yml builds a version tag into a GitHub Release and store uploads (docs/store/browser-stores.md)
 eval/               scripts that compared detectors, train the picture classifier and measure the hash
 brand/              the logo and its source, made by Kevin from two SVG Repo icons (see brand/README.md). Not under MIT. Don't replace it with generated art
 test-images/        private example pictures (ai/, real/). Not in git
@@ -58,6 +58,7 @@ docs/               architecture, testing, roadmap
 cd extension && node build.mjs                 # builds every browser (node build.mjs safari: just one)
 cd extension && node --test test/votes.test.mjs test/crowd.test.mjs # the vote client and the crowd's list
 cd extension && node --test test/meta.test.mjs test/download.test.mjs test/phash.test.mjs # detector, model download and hash tests
+cd extension && node --test test/release.test.mjs # the store uploaders against fake stores, and the AMO reviewer notes
 cd api && npm run typecheck && ./scripts/test-local.sh # API tests on a throwaway Postgres
 cd site && node build.mjs && node --test worker.test.mjs # builds the website into dist/, tests the origin check
 ```

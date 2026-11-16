@@ -97,7 +97,7 @@ A build that sends votes needs the updated privacy policy first, because the sto
 10. **Split `content.js`** (about 700 lines) into site rules, hiding UI, the hover button and the picture check, so the repo reads well.
 11. **CI:** GitHub Actions running the tests, the build and `web-ext lint`, plus one `npm test` at the top.
 12. **GitHub polish:** a demo GIF at the top of the README, and issue templates for "site broken" and "wrong call".
-13. **Releases:** tag each version and attach both zips.
+13. **Releases:** tag each version and attach both zips. Written on 2026-11-16 as `.github/workflows/release.yml`, which also uploads to the Chrome Web Store and AMO; not yet run on GitHub or against a store. Kevin's steps are in `docs/store/browser-stores.md`.
 14. **Store listings:** five 1280 × 800 screenshots, Chrome's 440 × 280 promo tile, and a written reason for "read all sites". Keep Facebook branding out of screenshots.
 15. **Name check:** search both stores and the trademark database for "Hide the Slop".
 

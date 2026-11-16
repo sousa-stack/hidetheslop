@@ -275,36 +275,93 @@ The full policy, including what's downloaded and what's kept on your computer, i
 
 ### Notes for Reviewers
 
-AMO's form caps this at 3,000 characters (its docs don't say; the form does). 2,306:
+AMO's form caps this at 3,000 characters (its docs don't say; the form does). The text is in [amo-reviewer-notes.txt](amo-reviewer-notes.txt), because the release workflow sends that file with every new version. `extension/test/release.test.mjs` fails if it grows past 3,000 characters or stops matching the files in `extension/src/ort/`. Read it before each release: nobody else does before Mozilla.
 
-```text
-Source: https://github.com/sousa-stack/hidetheslop (MIT), in extension/. build.mjs only copies src/ and writes manifest.json: no bundler or minifier, so no source upload is needed.
+## Releasing a new version without the dashboards
 
-ort/ is onnxruntime-web 1.31.1 (MIT), unmodified: byte-for-byte package/dist/ of the npm package (SHA-256 checked 2026-11-12).
-- ort.wasm.min.js b8a78c408c40da65fdc8ba0846f7b2948e92a4c6d6b23cc8e4165e428ad95443
-- ort-wasm-simd-threaded.mjs 30ed0b5cd1182ede931fea448afb567d4dc705ec957af09f108a2be5f770dac3
-- ort-wasm-simd-threaded.wasm 4b884c203b0fa48d057be3332c65513ff85aa3c5bddd6946acc0fab7ecda001d
-https://www.npmjs.com/package/onnxruntime-web/v/1.31.1
-It runs a picture model that is data, not code: an 89 MB ONNX file downloaded once, only when the picture check is turned on, from models.hidetheslop.com (or Hugging Face, pinned), rejected unless its SHA-256 matches vision.js. 'wasm-unsafe-eval' is only for this bundled WebAssembly.
+Written 2026-11-16. `.github/workflows/release.yml` runs when you push a tag like `v1.12.0`. It runs the extension's tests, builds, checks the tag against the version in `extension/build.mjs`, checks the tag's commit is on `main`, and makes a GitHub Release with both zips and that version's part of `CHANGELOG.md`. Then, if you've switched the stores on, it uploads the Chrome zip and sends it for review, and submits the Firefox zip to AMO as a listed version. Edge and Safari aren't in it.
 
-Validator warnings: the 3 innerHTML ones (content.js 270, 296, 704) set fixed markup from the file inside the extension's own shadow roots; page text goes in through textContent. The import() one is inside the unmodified ort.wasm.min.js.
+The uploads are two small scripts with no dependencies, `extension/tools/publish-chrome.mjs` and `publish-firefox.mjs`, so the workflow installs nothing from npm to do them.
 
-Why every site: it hides AI posts wherever you browse, including ad frames and feeds that can't be listed ahead of time. Pages are read locally.
+**Not yet run for real.** The scripts pass their tests against a fake Chrome Web Store and a fake AMO on this Mac (`extension/test/release.test.mjs`), and the workflow's shell steps were run by hand. No run has happened on GitHub, and nothing has talked to either store, because that needs the credentials below. Follow "Prove it" in order.
 
-What's sent:
-- The model, once, when the picture check is turned on.
-- While it's on, the crowd's list of AI picture fingerprints from api.hidetheslop.com every few hours; the same list for everyone, matched locally.
-- Only with sharing on (optional websiteContent): each rating sends a perceptual hash, the answer and a per-picture vote code, 1 to 6 hours later. Never the picture, its URL, the page or an ID.
-- origin-rules.json strips the moz-extension:// Origin from requests to its own server, so it can't act as a voter ID.
+### What each store does with an upload
 
-To test (no account):
-1. Open https://hidetheslop.com, scroll to "Try it": both AI flyers are hidden with nothing turned on, because their files carry the IPTC trainedAlgorithmicMedia note. The dog stays.
-2. Right-click any picture, "Hide this as AI slop": it's hidden behind a bar with Show.
-3. Settings, Pictures: turn on "Hide AI pictures nobody labeled" to try the picture model.
-4. Turn on sharing: Firefox asks for websiteContent.
+- **Chrome:** the zip is uploaded, then published with `DEFAULT_PUBLISH`, which sends it for review and makes it public by itself once it's approved. If an earlier version is still waiting for review, the job stops before uploading and says so: Google's docs don't say what a second upload does to a pending one. The API uses the listing's text, pictures and privacy answers as they are. A version that adds a permission needs its reason typed into the Privacy practices tab first, by hand.
+- **Firefox:** the zip is uploaded to the listed channel, AMO's validator runs, and the version is created with the notes for reviewers from `amo-reviewer-notes.txt`. The license carries over from 1.11.0. Listed versions are reviewed by Mozilla, often automatically.
+- **No source upload to AMO.** Mozilla asks for source when your own code went through a minifier, a bundler, a template engine or another build tool, and none of it does. For a third-party library it asks for a link to the exact official release, which the notes give for onnxruntime-web, with the three files' hashes. Its docs don't say in so many words that an unmodified minified library is exempt, but 1.11.0 was approved this way.
+- **Neither store takes the same version twice.** If a store job fails after the upload went in, fix the cause and bump the version.
 
-Contact: hello@hidetheslop.com
-```
+### Set up GitHub, once
+
+In the repo on github.com, as `sousa-stack`:
+
+1. **Settings, Environments, New environment,** named `stores`.
+2. In it, **Deployment branches and tags**: choose **Selected branches and tags**, then **Add deployment branch or tag rule**, set the type to **Tag**, and enter `v*`. Add no branch rule. Now only a run started from a `v*` tag can read the store secrets, and the workflow itself refuses a tag whose commit isn't on `main`.
+3. Optional, and worth it: tick **Required reviewers** and add yourself. Each store job then waits for you to press Approve, which is one last look before anything leaves.
+4. **Settings, Rules, Rulesets, New tag ruleset**: target `v*`, tick **Restrict creations**, **Restrict updates** and **Restrict deletions**, and add **Repository admin** to the bypass list. That stops anyone but you making or moving a version tag.
+5. Leave the `STORE_PUBLISH_ENABLED` variable alone for now. While it isn't `true`, a tag stops at the GitHub Release.
+
+All the secrets below go in the `stores` environment (**Settings, Environments, stores, Add environment secret**), never in repository secrets, and never in a file in this repo.
+
+| Secret | What it is |
+|---|---|
+| `CHROME_PUBLISHER_ID` | Your publisher ID from the Chrome Developer Dashboard |
+| `CHROME_SERVICE_ACCOUNT_JSON` | The whole JSON key file of the Google service account |
+| `AMO_JWT_ISSUER` | AMO's "JWT issuer", which looks like `user:12345:67` |
+| `AMO_JWT_SECRET` | AMO's "JWT secret" |
+
+The Chrome item ID and the Firefox add-on ID are public, so they're in the workflow file.
+
+### Chrome Web Store credentials
+
+Google needs 2-step verification on the account that owns the listing before the API will publish.
+
+1. Open https://console.cloud.google.com, signed in as the Google account that owns the listing. Create a project (any name, such as `hidetheslop-release`).
+2. **APIs & Services, Library**: search for **Chrome Web Store API** and press **Enable**.
+3. **IAM & Admin, Service Accounts, Create service account**. Give it a name and skip the roles: it needs none. Copy its email address, which ends in `.iam.gserviceaccount.com`.
+4. In the Chrome Developer Dashboard (https://chrome.google.com/webstore/devconsole), open **Account** and add that email as the service account. A publisher can have only one.
+5. Back in Google Cloud, open the service account, **Keys, Add key, Create new key, JSON**. A file downloads. Open it, paste everything in it into the `CHROME_SERVICE_ACCOUNT_JSON` secret, then delete the file and empty the Trash.
+6. In the Developer Dashboard, find your publisher ID (Google's docs put it under **Publisher, Settings**; make sure you're on the publisher that owns Hide the Slop). Save it as `CHROME_PUBLISHER_ID`.
+
+Google's docs don't say whether a service account works for a publisher that's one person and not a group. If step 4 has nowhere to add it, or the credential check below answers 403, use an OAuth client instead. The workflow takes these three secrets when `CHROME_SERVICE_ACCOUNT_JSON` is empty:
+
+1. In the same Google Cloud project, set up the **OAuth consent screen**: **External**, with an app name and your email, no scopes, and yourself under **Test users**. Then set its publishing status to **In production**. Google's Chrome docs don't mention it, but Google's OAuth rules expire a refresh token after 7 days while the app is in **Testing**.
+2. **Credentials, Create credentials, OAuth client ID, Web application**, with `https://developers.google.com/oauthplayground` as an authorized redirect URI. Save the client ID as `CHROME_CLIENT_ID` and the client secret as `CHROME_CLIENT_SECRET`.
+3. Open https://developers.google.com/oauthplayground, press the gear, tick **Use your own OAuth credentials** and paste both. Type the scope `https://www.googleapis.com/auth/chromewebstore`, press **Authorize APIs**, sign in as the listing's owner, then **Exchange authorization code for tokens**. Save the refresh token as `CHROME_REFRESH_TOKEN`.
+
+### Firefox (AMO) credentials
+
+1. Open https://addons.mozilla.org/developers/addon/api/key/, signed in as the account that owns the listing.
+2. Press **Generate new credentials**.
+3. Save **JWT issuer** as `AMO_JWT_ISSUER` and **JWT secret** as `AMO_JWT_SECRET`. AMO shows the secret once.
+
+### Prove it, in this order
+
+1. **A dry run, with no tag and no secrets.** Once the workflow is on `main`: **Actions, Release, Run workflow**, from `main`, with Stores left at `none`. It tests and builds, and the two zips are kept with the run for 14 days as `extension-zips`. Nothing is published anywhere.
+2. **A Release, with the stores off.** Push a tag while `STORE_PUBLISH_ENABLED` is unset. `v1.11.0` works today, because `extension/` hasn't changed since the zips you uploaded by hand:
+
+   ```bash
+   git tag v1.11.0 && git push origin v1.11.0
+   ```
+
+   You get a public GitHub Release with both zips, and the store jobs are skipped. A Release can be deleted afterward if you'd rather not have one for 1.11.0.
+3. **Check the credentials without uploading.** **Run workflow** again, but pick the tag under **Use workflow from**, and set Stores to `check`. Each store job signs in and prints what the store holds now: Chrome's published version, and AMO's newest versions. It uploads nothing. A wrong key fails here, not on release day.
+4. **Switch the stores on.** **Settings, Secrets and variables, Actions, Variables, New repository variable**: `STORE_PUBLISH_ENABLED` = `true`.
+5. **The first real one** is the next version's tag. If a tag was pushed while the stores were off, **Run workflow** from that tag with Stores set to `publish` does just the store part.
+
+### Each release after that
+
+1. Bump `version` in `extension/build.mjs`, and add a `## x.y.z` section to `CHANGELOG.md` (the workflow fails without one).
+2. Read `amo-reviewer-notes.txt` and fix anything that's stopped being true.
+3. Commit and push to `main`, then tag that commit and push the tag:
+
+   ```bash
+   git tag v1.12.0 && git push origin v1.12.0
+   ```
+
+4. Watch **Actions, Release**. If one store job fails, **Re-run failed jobs** retries only that one.
+5. Edge still takes the Chrome zip by hand, from the GitHub Release, once it has a listing. Safari is `safari/release.sh`.
 
 ## Where the numbers are
 
@@ -356,6 +413,13 @@ addons.mozilla.org
 - Add-on policies: https://extensionworkshop.com/documentation/publish/add-on-policies/ and the version taking effect 2026-12-01: https://extensionworkshop.com/documentation/publish/add-on-policies-preview-2026-12/
 - Built-in data consent (`websiteContent`): https://extensionworkshop.com/documentation/develop/firefox-builtin-data-consent/
 - Statistics: https://extensionworkshop.com/documentation/manage/monitoring-extension-usage-statistics/
+
+Release workflow (checked 2026-11-16)
+- Chrome Web Store API, V2 (V1 was due to stop on 2026-10-15): https://developer.chrome.com/docs/webstore/using-api and https://developer.chrome.com/blog/cws-api-v2
+- Upload, publish, status: https://developer.chrome.com/docs/webstore/api/reference/rest
+- Service accounts: https://developer.chrome.com/docs/webstore/service-accounts
+- AMO upload and version create: https://mozilla.github.io/addons-server/topics/api/addons.html
+- AMO API keys and tokens: https://mozilla.github.io/addons-server/topics/api/auth.html
 
 Apple and GitHub
 - App Store Connect metrics: https://developer.apple.com/help/app-store-connect/reference/app-metrics

@@ -1,0 +1,26 @@
+Source: https://github.com/sousa-stack/hidetheslop (MIT), in extension/. build.mjs only copies src/ and writes manifest.json: no bundler or minifier, so no source upload is needed. This version was built and submitted by the repo's release workflow from the tag of the same number.
+
+ort/ is onnxruntime-web 1.31.1 (MIT), unmodified: byte-for-byte package/dist/ of the npm package.
+- ort.wasm.min.js b8a78c408c40da65fdc8ba0846f7b2948e92a4c6d6b23cc8e4165e428ad95443
+- ort-wasm-simd-threaded.mjs 30ed0b5cd1182ede931fea448afb567d4dc705ec957af09f108a2be5f770dac3
+- ort-wasm-simd-threaded.wasm 4b884c203b0fa48d057be3332c65513ff85aa3c5bddd6946acc0fab7ecda001d
+https://www.npmjs.com/package/onnxruntime-web/v/1.31.1
+It runs a picture model that is data, not code: an 89 MB ONNX file downloaded once, only when the picture check is turned on, from models.hidetheslop.com (or Hugging Face, pinned), rejected unless its SHA-256 matches vision.js. 'wasm-unsafe-eval' is only for this bundled WebAssembly.
+
+Validator warnings: the innerHTML ones in content.js set fixed markup from the file inside the extension's own shadow roots; page text goes in through textContent. The import() one is inside the unmodified ort.wasm.min.js.
+
+Why every site: it hides AI posts wherever you browse, including ad frames and feeds that can't be listed ahead of time. Pages are read locally.
+
+What's sent:
+- The model, once, when the picture check is turned on.
+- While it's on, the crowd's list of AI picture fingerprints from api.hidetheslop.com every few hours; the same list for everyone, matched locally.
+- Only with sharing on (optional websiteContent): each rating sends a perceptual hash, the answer and a per-picture vote code, 1 to 6 hours later. Never the picture, its URL, the page or an ID.
+- origin-rules.json strips the moz-extension:// Origin from requests to its own server, so it can't act as a voter ID.
+
+To test (no account):
+1. Open https://hidetheslop.com, scroll to "Try it": both AI flyers are hidden with nothing turned on, because their files carry the IPTC trainedAlgorithmicMedia note. The dog stays.
+2. Right-click any picture, "Hide this as AI slop": it's hidden behind a bar with Show.
+3. Settings, Pictures: turn on "Hide AI pictures nobody labeled" to try the picture model.
+4. Turn on sharing: Firefox asks for websiteContent.
+
+Contact: hello@hidetheslop.com
